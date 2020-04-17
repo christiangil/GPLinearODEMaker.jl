@@ -1,0 +1,15 @@
+name = "GPLinearODEMaker"
+uuid = "27ef9b34-1325-4cec-ba33-00f2f4637873"
+authors = ["Chistian Gilbertson <chistianjgilbertson@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SharedArrays = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+UnitfulAstro = "6112ee07-acf9-5e0f-b108-d242c714bf9f"
