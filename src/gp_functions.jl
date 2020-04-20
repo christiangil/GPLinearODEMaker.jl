@@ -363,6 +363,9 @@ function get_σ(
     ) where {T<:Real}
 
     v = L_obs \ Σ_obs_samp
+    # thing = diag_Σ_samp - [dot(v[:, i], v[:, i]) for i in 1:length(diag_Σ_samp)]
+    # thing[abs.(thing) .< 1e-10] .= 0
+    # return sqrt.(thing)  # σ
     return sqrt.(diag_Σ_samp - [dot(v[:, i], v[:, i]) for i in 1:length(diag_Σ_samp)])  # σ
     # return sqrt.(diag_Σ_samp - diag(Σ_samp_obs * (Σ_obs \ Σ_obs_samp)))  # much slower
 end
@@ -429,7 +432,6 @@ function GP_posteriors_from_covariances(
     Σ_samp_obs::Union{Symmetric{T,Matrix{T}},Matrix{T}},
     Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
     Σ_obs_raw::Symmetric{T,Matrix{T}};
-    return_σ::Bool=false,
     return_Σ::Bool=true,
     chol::Bool=false
     ) where {T<:Real}
@@ -465,7 +467,6 @@ function GP_posteriors_from_covariances(
     Σ_obs::Cholesky{T,Matrix{T}},
     Σ_samp_obs::Union{Symmetric{T,Matrix{T}},Matrix{T}},
     Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}};
-    return_σ::Bool=false,
     return_Σ::Bool=true,
     chol::Bool=false
     ) where {T<:Real}

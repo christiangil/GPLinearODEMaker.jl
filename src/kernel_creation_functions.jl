@@ -28,9 +28,9 @@ The function is saved in src/kernels/\$kernel_name.jl, so you can use it with a 
 function kernel_coder(
     symbolic_kernel_original::Basic,
     kernel_name::String;
-    add_white_noise::Bool=false,
     periodic_var::String="",
     cutoff_var::String="")
+    # add_white_noise::Bool=false)
 
     δ = symbols("δ")
     periodic = periodic_var != ""
@@ -52,10 +52,10 @@ function kernel_coder(
         # kernel_name *= "_periodic"
     end
 
-    if add_white_noise
-        σ_white = symbols("σ_white")
-        symbolic_kernel_original += σ_white * σ_white
-    end
+    # if add_white_noise
+    #     σ_white = symbols("σ_white")
+    #     symbolic_kernel_original += σ_white * σ_white
+    # end
 
     # get the symbols of the passed function
     symbs = free_symbols(symbolic_kernel_original)
@@ -99,9 +99,9 @@ function $kernel_name(
     for i in 1:(hyper_amount)
         write(io, "    " * symbs_str[i] * " = hyperparameters[$i]\n")
     end
-    if add_white_noise
-        write(io, "    σ_white *= Int(δ == 0)\n")  # accounting for white noise only being on the diagonal
-    end
+    # if add_white_noise
+    #     write(io, "    σ_white *= Int(δ == 0)\n")  # accounting for white noise only being on the diagonal
+    # end
     write(io, "\n")
 
     if cutoff_var!=""

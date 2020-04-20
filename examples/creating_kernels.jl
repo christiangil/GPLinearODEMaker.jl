@@ -42,11 +42,6 @@ GLOM.kernel_coder(GLOM.se_kernel_base(λ1, δ) + sratio * sratio * GLOM.se_kerne
 GLOM.kernel_coder(GLOM.se_kernel_base(se_λ, δ) * GLOM.se_kernel_base(1 / p_amp, δp), "qp"; periodic_var="δp")
 
 #process for rq_kernel_base
-
-# @vars δ k θ
-# GLOM.kernel_coder(rq_kernel_base([k, θ], δ), "rq_kernel")
-# @vars δ α β
-# GLOM.kernel_coder(rq_kernel_base([α, β], δ), "rq_kernel")
 @vars δ α μ
 GLOM.kernel_coder(GLOM.rq_kernel_base([α, μ], δ), "rq")
 

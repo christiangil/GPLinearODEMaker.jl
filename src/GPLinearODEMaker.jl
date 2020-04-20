@@ -8,7 +8,9 @@ using Random
 using Distributed
 using SharedArrays
 using SymEngine
+using IterativeSolvers
 
+# using Pkg
 # Pkg.add("LinearAlgebra")
 # Pkg.add("Unitful")
 # Pkg.add("UnitfulAstro")
@@ -18,6 +20,7 @@ using SymEngine
 # Pkg.add("SharedArrays")
 # Pkg.add("SymEngine")
 # Pkg.pin(PackageSpec(name="SymEngine", version="0.6.0"))
+# Pkg.add("IterativeSolvers")
 
 import Base.ndims
 
