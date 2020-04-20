@@ -7,7 +7,6 @@ using Distributed
 using SharedArrays
 using SymEngine
 using IterativeSolvers
-using Documenter
 using Statistics
 
 # using Pkg
