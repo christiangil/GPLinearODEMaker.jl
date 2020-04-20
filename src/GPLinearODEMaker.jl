@@ -1,19 +1,18 @@
 module GPLinearODEMaker
 
 using LinearAlgebra
-using Unitful
-using UnitfulAstro
 using SpecialFunctions
 using Random
 using Distributed
 using SharedArrays
 using SymEngine
 using IterativeSolvers
+using Documenter
+using Statistics
 
 # using Pkg
+# Pkg.activate(".")
 # Pkg.add("LinearAlgebra")
-# Pkg.add("Unitful")
-# Pkg.add("UnitfulAstro")
 # Pkg.add("SpecialFunctions")
 # Pkg.add("Random")
 # Pkg.add("Distributed")
@@ -21,6 +20,8 @@ using IterativeSolvers
 # Pkg.add("SymEngine")
 # Pkg.pin(PackageSpec(name="SymEngine", version="0.6.0"))
 # Pkg.add("IterativeSolvers")
+# Pkg.add("Documenter")
+# Pkg.add("Statistics")
 
 import Base.ndims
 

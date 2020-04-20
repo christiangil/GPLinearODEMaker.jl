@@ -3,6 +3,8 @@ using LinearAlgebra
 import GPLinearODEMaker
 GLOM = GPLinearODEMaker
 
+println("Testing...")
+
 @testset "cholesky factorizations" begin
     A = [4. 12 -16; 12 37 -43; -16 -43 98]
     chol_A = GLOM.ridge_chol(A)

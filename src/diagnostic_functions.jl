@@ -1,7 +1,3 @@
-# these are all custom diagnostic functions. May help with debugging
-using Statistics
-
-
 """
 Estimate the covariance derivatives with forward differences
 """
