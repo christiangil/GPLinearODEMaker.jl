@@ -1,7 +1,7 @@
 """
-white_kernel function created by kernel_coder(). Requires 1 hyperparameters. Likely created using white_kernel_base() as an input.
+white_kernel function created by kernel_coder(). Requires 0 hyperparameters. Likely created using white_kernel_base() as an input.
 Use with include("src/kernels/white_kernel.jl").
-hyperparameters == ["σ"]
+hyperparameters == []
 """
 function white_kernel(
     hyperparameters::Vector{<:Real},

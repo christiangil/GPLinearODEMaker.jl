@@ -1,8 +1,8 @@
 using SymEngine
 
 """
-Creates the necessary differentiated versions of base kernels required by the GLOM et al. 2017 paper (https://arxiv.org/abs/1711.01318) method.
-You must pass it a SymEngine Basic object with the variables already declared with the @vars command. δ or abs_δ must be the first declared variables.
+Creates the necessary differentiated versions of base kernels required by GLOM.
+You must pass it a SymEngine Basic object with the variables already declared with the @vars command.
 The created function will look like this
 
     \$kernel_name(hyperparameters::Vector{<:Real}, δ::Real; dorder::Vector{<:Integer}=zeros(Int64, length(hyperparameters) + 2))
@@ -10,14 +10,14 @@ The created function will look like this
 For example, you could define a kernel like so:
 
     "Radial basis function GP kernel (aka squared exonential, ~gaussian)"
-    function rbf_kernel_base(λ::Number, δ::Number)
+    function se_kernel_base(λ::Number, δ::Number)
         return exp(-δ ^ 2 / (2 * λ ^ 2))
     end
 
 And then calculate the necessary derivative versions like so:
 
     @vars δ λ
-    kernel_coder(rbf_kernel_base(λ, δ), "rbf_kernel")
+    kernel_coder(se_kernel_base(λ, δ), "se_kernel")
 
 The function is saved in src/kernels/\$kernel_name.jl, so you can use it with a command akin to this:
 
@@ -28,6 +28,7 @@ The function is saved in src/kernels/\$kernel_name.jl, so you can use it with a 
 function kernel_coder(
     symbolic_kernel_original::Basic,
     kernel_name::String;
+    add_white_noise::Bool=false,
     periodic_var::String="",
     cutoff_var::String="")
 
@@ -50,6 +51,12 @@ function kernel_coder(
         # end
         # kernel_name *= "_periodic"
     end
+
+    if add_white_noise
+        σ_white = symbols("σ_white")
+        symbolic_kernel_original += σ_white * σ_white
+    end
+
     # get the symbols of the passed function
     symbs = free_symbols(symbolic_kernel_original)
 
@@ -90,7 +97,10 @@ function $kernel_name(
 
     # map the hyperparameters that will be passed to this function to the symbol names
     for i in 1:(hyper_amount)
-        write(io, "    " * symbs_str[i] * " = hyperparameters[$i]" * "\n")
+        write(io, "    " * symbs_str[i] * " = hyperparameters[$i]\n")
+    end
+    if add_white_noise
+        write(io, "    σ_white *= Int(δ == 0)\n")  # accounting for white noise only being on the diagonal
     end
     write(io, "\n")
 
@@ -186,8 +196,8 @@ function $kernel_name(
     end
 
     write(io, "    dorder[2] = dorder2  # resetting dorder[2]\n")
-    write(io, "    return  powers_of_negative_one(dorder2) * float(func)  # correcting for amount of t2 derivatives\n\n")
-    write(io, "end\n\n\n")
+    write(io, "    return powers_of_negative_one(dorder2) * float(func)  # correcting for amount of t2 derivatives")
+    write(io, "\n\nend\n\n\n")
     write(io, "return $kernel_name, $hyper_amount  # the function handle and the number of kernel hyperparameters\n")
     close(io)
 

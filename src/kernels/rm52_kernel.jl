@@ -145,7 +145,7 @@ function rm52_kernel(
     end
 
     dorder[2] = dorder2  # resetting dorder[2]
-    return  powers_of_negative_one(dorder2) * float(func)  # correcting for amount of t2 derivatives
+    return powers_of_negative_one(dorder2) * float(func)  # correcting for amount of t2 derivatives
 
 end
 
