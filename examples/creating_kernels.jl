@@ -10,12 +10,18 @@ using SymEngine
 @vars δ λ
 GLOM.kernel_coder(GLOM.se_kernel_base(λ, δ), "se")
 
+@vars δ λ
+GLOM.kernel_coder(GLOM.se_kernel_base(λ, δ), "se_white"; add_white_noise=true)
+
 #process for matern52_kernel_base
 @vars δ λ
 GLOM.kernel_coder(GLOM.matern52_kernel_base(λ, δ), "m52")
 
-@vars δ, λ
+@vars δ λ
 GLOM.kernel_coder(GLOM.pp_kernel_base(λ, δ), "pp"; cutoff_var="λ")
+
+@vars δ λ
+GLOM.kernel_coder(GLOM.pp_kernel_base(λ, δ), "pp_white"; cutoff_var="λ", add_white_noise=true)
 
 @vars δ λ1 λ2 sratio
 GLOM.kernel_coder(GLOM.matern52_kernel_base(λ1, δ) + sratio * sratio * GLOM.matern52_kernel_base(λ2, δ), "m52_m52")
