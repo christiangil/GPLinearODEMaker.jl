@@ -1,7 +1,7 @@
 GPLinearODEMaker.jl
 ========
 
-GPLinearODEMaker (GLOM) is a package for finding the likelihood multivariate Gaussian processes (GP) that are composed of a linear comination of a univariate GP and its derivatives.
+GPLinearODEMaker (GLOM) is a package for finding the likelihood (and derivatives thereof) of multivariate Gaussian processes (GP) that are composed of a linear comination of a univariate GP and its derivatives.
 
 ![q_0(t) = m_0(t) + a_{00}X(t) + a_{01}\dot{X}(t) + a_{02}\ddot{X}(t)](https://render.githubusercontent.com/render/math?math=q_0(t)%20%3D%20m_0(t)%20%2B%20a_%7B00%7DX(t)%20%2B%20a_%7B01%7D%5Cdot%7BX%7D(t)%20%2B%20a_%7B02%7D%5Cddot%7BX%7D(t))
 
