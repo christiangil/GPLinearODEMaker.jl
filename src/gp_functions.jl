@@ -1,44 +1,4 @@
 """
-The basic kernel function evaluator
-t1 and t2 are single time points
-kernel_hyperparameters = the hyperparameters for the base kernel (e.g. [kernel_period, kernel_length])
-dorder = the amount of derivatives to take wrt t1 and t2
-dΣdθ_kernel = which hyperparameter to take a derivative wrt
-"""
-function kernel(
-    kernel_func::Function,
-    kernel_hyperparameters::Vector{<:Real},
-    t1::Real,
-    t2::Real;
-    dorder::Vector{T}=zeros(Int64, 2),
-    dΣdθs_kernel::Vector{T}=Int64[]
-    ) where {T<:Integer}
-
-    @assert all(dΣdθs_kernel .<= length(kernel_hyperparameters)) "Asking to differentiate by hyperparameter that the kernel doesn't have"
-    @assert length(dΣdθs_kernel) <= 2 "Only two kernel hyperparameter derivatives are currently supported"
-
-    dif = (t1 - t2)
-    dorder_tot = append!(copy(dorder), zeros(Int64, length(kernel_hyperparameters)))
-
-    for dΣdθ_kernel in dΣdθs_kernel
-        if dΣdθ_kernel > 0; dorder_tot[2 + dΣdθ_kernel] += 1 end
-    end
-
-    return kernel_func(kernel_hyperparameters, dif; dorder=dorder_tot)
-
-end
-
-kernel(
-    prob_def::GLO,
-    kernel_hyperparameters,
-    t1,
-    t2;
-    dorder=zeros(Int64, 2),
-    dΣdθs_kernel=Int64[]
-    ) = kernel(prob_def.kernel, kernel_hyperparameters, t1, t2; dorder=dorder, dΣdθs_kernel=dΣdθs_kernel)
-
-
-"""
 Creates the covariance matrix by evaluating the kernel function for each pair of passed inputs
 symmetric = a parameter stating whether the covariance is guarunteed to be symmetric about the diagonal
 """
@@ -48,9 +8,8 @@ function covariance!(
     x1list::Vector{T1},
     x2list::Vector{T1},
     kernel_hyperparameters::Vector{T1};
-    dorder::Vector{T2}=zeros(Int64, 2),
-    symmetric::Bool=false,
-    dΣdθs_kernel::Vector{T2}=Int64[]
+    dorder::Vector{T2}=zeros(Int64, 2 + length(kernel_hyperparameters)),
+    symmetric::Bool=false
     ) where {T1<:Real, T2<:Integer}
 
     @assert issorted(x1list)
@@ -61,7 +20,7 @@ function covariance!(
     # are the x's passed identical and equally spaced
     if same_x
         spacing = x1list[2:end]-x1list[1:end-1]
-        equal_spacing = all((spacing .- spacing[1]) .< (1e-6 * spacing[1]))
+        equal_spacing = all((spacing .- spacing[1]) .< (1e-8 * spacing[1]))
     else
         @assert issorted(x2list)
         equal_spacing = false
@@ -77,14 +36,14 @@ function covariance!(
         # this section is so fast, it isn't worth parallelizing
         kernline = zeros(x1_length)
         for i in 1:x1_length
-            kernline[i] = kernel(kernel_func, kernel_hyperparameters, x1list[1], x1list[i], dorder=dorder, dΣdθs_kernel=dΣdθs_kernel)
+            kernline[i] = kernel_func(kernel_hyperparameters, x1list[1] - x1list[i], dorder)
         end
         for i in 1:x1_length
             Σ[i, i:end] = kernline[1:(x1_length + 1 - i)]
         end
         return Symmetric(Σ)
     else
-        covariance!(Σ, kernel_func, x1list, x2list, kernel_hyperparameters, dorder, symmetric, dΣdθs_kernel, same_x, equal_spacing)
+        covariance!(Σ, kernel_func, x1list, x2list, kernel_hyperparameters, dorder, symmetric, same_x, equal_spacing)
     end
 end
 
@@ -96,7 +55,6 @@ function covariance!(
     kernel_hyperparameters::Vector{T1},
     dorder::Vector{T2},
     symmetric::Bool,
-    dΣdθs_kernel::Vector{T2},
     same_x::Bool,
     equal_spacing::Bool
     ) where {T1<:Real, T2<:Integer}
@@ -107,18 +65,18 @@ function covariance!(
     @assert size(Σ) == (x1_length, x2_length)
 
     if same_x && symmetric
-        sendto(workers(), kernel_func=kernel_func, kernel_hyperparameters=kernel_hyperparameters, x1list=x1list, dorder=dorder, dΣdθs_kernel=dΣdθs_kernel)
+        sendto(workers(), kernel_func=kernel_func, kernel_hyperparameters=kernel_hyperparameters, x1list=x1list, dorder=dorder)
         @sync @distributed for i in 1:length(x1list)
             for j in 1:length(x1list)
-                if i <= j; Σ[i, j] = kernel(kernel_func, kernel_hyperparameters, x1list[i], x1list[j], dorder=dorder, dΣdθs_kernel=dΣdθs_kernel) end
+                if i <= j; Σ[i, j] = kernel_func(kernel_hyperparameters, x1list[i] - x1list[j], dorder) end
             end
         end
         return Symmetric(Σ)
     else
-        sendto(workers(), kernel_func=kernel_func, kernel_hyperparameters=kernel_hyperparameters, x1list=x1list, x2list=x2list, dorder=dorder, dΣdθs_kernel=dΣdθs_kernel)
+        sendto(workers(), kernel_func=kernel_func, kernel_hyperparameters=kernel_hyperparameters, x1list=x1list, x2list=x2list, dorder=dorder)
         @sync @distributed for i in 1:length(x1list)
             for j in 1:length(x2list)
-                Σ[i, j] = kernel(kernel_func, kernel_hyperparameters, x1list[i], x2list[j], dorder=dorder, dΣdθs_kernel=dΣdθs_kernel)
+                Σ[i, j] = kernel_func(kernel_hyperparameters, x1list[i] - x2list[j], dorder)
             end
         end
         return Σ
@@ -133,7 +91,6 @@ function covariance!(
     kernel_hyperparameters::Vector{T1},
     dorder::Vector{T2},
     symmetric::Bool,
-    dΣdθs_kernel::Vector{T2},
     same_x::Bool,
     equal_spacing::Bool
     ) where {T1<:Real, T2<:Integer}
@@ -146,14 +103,14 @@ function covariance!(
     if same_x && symmetric
         for i in 1:length(x1list)
             for j in 1:length(x1list)
-                if i <= j; Σ[i, j] = kernel(kernel_func, kernel_hyperparameters, x1list[i], x1list[j], dorder=dorder, dΣdθs_kernel=dΣdθs_kernel) end
+                if i <= j; Σ[i, j] = kernel_func(kernel_hyperparameters, x1list[i] - x1list[j], dorder) end
             end
         end
         return Symmetric(Σ)
     else
         for i in 1:length(x1list)
             for j in 1:length(x2list)
-                Σ[i, j] = kernel(kernel_func, kernel_hyperparameters, x1list[i], x2list[j], dorder=dorder, dΣdθs_kernel=dΣdθs_kernel)
+                Σ[i, j] = kernel_func(kernel_hyperparameters, x1list[i] - x2list[j], dorder)
             end
         end
         return Σ
@@ -166,17 +123,16 @@ function covariance(
     x1list::Vector{T1},
     x2list::Vector{T1},
     kernel_hyperparameters::Vector{T1};
-    dorder::Vector{T2}=zeros(Int64, 2),
+    dorder::Vector{T2}=zeros(Int64, 2 + length(kernel_hyperparameters)),
     symmetric::Bool=false,
-    dΣdθs_kernel::Vector{T2}=Int64[]
     ) where {T1<:Real, T2<:Integer}
 
     if nworkers()>1
-        return covariance!(SharedArray{Float64}(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric, dΣdθs_kernel=dΣdθs_kernel)
+        return covariance!(SharedArray{Float64}(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric)
     else
-        return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric, dΣdθs_kernel=dΣdθs_kernel)
+        return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric)
     end
-    # return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric, dΣdθs_kernel=dΣdθs_kernel)
+    # return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric)
 end
 
 
@@ -214,21 +170,22 @@ function covariance(
     # only calculating each sub-matrix once and using the fact that they should
     # be basically the same if the kernel has been differentiated the same amount of times
     A_list = Vector{AbstractArray{<:Real,2}}(undef, 2 * n_dif - 1)
-    for i in 0:(2 * n_dif - 2)
-
-        # CHANGE THIS TO MAKE MORE SENSE WITH NEW KERNEL SCHEME
-        # VERY HACKY
-        dorder = [rem(i - 1, 2) + 1, 2 * div(i - 1, 2)]
-
-        # things that have been differentiated an even amount of times are symmetric about t1-t2==0
-        if iseven(i)
-            A_list[i + 1] = copy(covariance!(holder, prob_def.kernel, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=true, dΣdθs_kernel=dΣdθs_kernel))
-        else
-            A_list[i + 1] = copy(covariance!(holder, prob_def.kernel, x1list, x2list, kernel_hyperparameters; dorder=dorder, dΣdθs_kernel=dΣdθs_kernel))
-        end
-
+    dorder = zeros(Int64, 2 + length(kernel_hyperparameters))
+    for dΣdθ_kernel in dΣdθs_kernel
+        if dΣdθ_kernel > 0; dorder[2 + dΣdθ_kernel] += 1 end
     end
-
+    if !prob_def.kernel_changes_with_output
+        for i in 0:(2 * n_dif - 2)
+            dorder[1] = rem(i - 1, 2) + 1
+            dorder[2] = 2 * div(i - 1, 2)
+            # things that have been differentiated an even amount of times are symmetric about t1-t2==0
+            if iseven(i)
+                A_list[i + 1] = copy(covariance!(holder, prob_def.kernel, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=true))
+            else
+                A_list[i + 1] = copy(covariance!(holder, prob_def.kernel, x1list, x2list, kernel_hyperparameters; dorder=dorder))
+            end
+        end
+    end
     # assembling the coefficient matrix
     a = reshape(total_hyperparameters[1:num_coefficients], (n_out, n_dif))
 
@@ -241,6 +198,19 @@ function covariance(
     for i in 1:n_out
         for j in 1:n_out
             # if i <= j  # only need to calculate one set of the off-diagonal blocks
+            if prob_def.kernel_changes_with_output
+                outputs = [i,j]
+                for i in 0:(2 * n_dif - 2)
+                    dorder[1] = rem(i - 1, 2) + 1
+                    dorder[2] = 2 * div(i - 1, 2)
+                    # things that have been differentiated an even amount of times are symmetric about t1-t2==0
+                    if iseven(i)
+                        A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> prob_def.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=true))
+                    else
+                        A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> prob_def.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder))
+                    end
+                end
+            end
                 for k in 1:n_dif
                     for l in 1:n_dif
                         # if the coefficient for the GLOM coefficients is non-zero
@@ -264,6 +234,7 @@ function covariance(
     end
 
     # making the highest variances all along the main diagonals
+    #TODO implement in above step (aka at initial assignment)
     Σ_rearranged = zeros((n_out * x1_length, n_out * x2_length))
     for i in 1:x1_length
         for j in 1:x2_length
@@ -995,32 +966,17 @@ end
 
 
 """
-Tries to include the specified kernel from common directories
-Returns the number of hyperparameters it uses
-"""
-function include_kernel(kernel_name::AbstractString)
-    if !occursin("_kernel", kernel_name)
-        kernel_name *= "_kernel"
-    end
-    try
-        return include("src/kernels/$kernel_name.jl")
-    catch
-        return include("../src/kernels/$kernel_name.jl")
-    end
-end
-
-
-"""
 Make it easy to run the covariance calculations on many processors
 Makes sure every worker has access to kernel function
 """
 function prep_parallel_covariance(
-    kernel_name::AbstractString;
+    kernel_name::AbstractString,
+    kernel_path::AbstractString;
     add_procs::Integer=0)
 
     prep_parallel(; add_procs=add_procs)
     sendto(workers(), kernel_name=kernel_name)
-    @everywhere include_kernel(kernel_name)
+    @everywhere include(kernel_path)
 end
 
 

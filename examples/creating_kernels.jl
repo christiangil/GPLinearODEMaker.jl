@@ -5,13 +5,8 @@ GLOM = GPLinearODEMaker
 using SymEngine
 
 # process for se_kernel_base
-# @vars σ δ λ
-# GLOM.kernel_coder(σ * exp(-δ * δ / (2 * λ * λ)), "se")
 @vars δ λ
 GLOM.kernel_coder(GLOM.se_kernel_base(λ, δ), "se")
-
-@vars δ λ
-GLOM.kernel_coder(GLOM.se_kernel_base(λ, δ), "se_white"; add_white_noise=true)
 
 #process for matern52_kernel_base
 @vars δ λ
@@ -19,9 +14,6 @@ GLOM.kernel_coder(GLOM.matern52_kernel_base(λ, δ), "m52")
 
 @vars δ λ
 GLOM.kernel_coder(GLOM.pp_kernel_base(λ, δ), "pp"; cutoff_var="λ")
-
-@vars δ λ
-GLOM.kernel_coder(GLOM.pp_kernel_base(λ, δ), "pp_white"; cutoff_var="λ", add_white_noise=true)
 
 @vars δ λ1 λ2 sratio
 GLOM.kernel_coder(GLOM.matern52_kernel_base(λ1, δ) + sratio * sratio * GLOM.matern52_kernel_base(λ2, δ), "m52_m52")
@@ -55,3 +47,6 @@ GLOM.kernel_coder(GLOM.rq_kernel_base([α, λ], δ), "rq"; periodic_var="δ")
 
 @vars δ λ
 GLOM.kernel_coder(GLOM.cosine_kernel_base(λ, δ), "cos")
+
+@vars σ
+GLOM.kernel_coder(σ^2, "scale")

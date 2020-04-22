@@ -72,7 +72,7 @@ function est_∇(f::Function, inputs::Vector{<:Real}; dif::Real=1e-7, ignore_0_i
 
     #estimate gradient
     j = 1
-    grad = zeros(length(inputs))
+    grad = zeros(length(remove_zeros(inputs)))
     for i in 1:length(inputs)
         if !ignore_0_inputs || inputs[i]!=0
             hold = copy(inputs)
@@ -162,7 +162,8 @@ function est_∇∇(g::Function, inputs::Vector{<:Real}; dif::Real=1e-7, ignore_
 
     #estimate hessian
     j = 1
-    hess = zeros(length(inputs), length(inputs))
+    dim = length(remove_zeros(inputs))
+    hess = zeros(dim, dim)
     for i in 1:length(inputs)
         if !ignore_0_inputs || inputs[i]!=0
             hold = copy(inputs)

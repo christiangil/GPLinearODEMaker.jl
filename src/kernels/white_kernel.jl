@@ -1,5 +1,5 @@
 """
-white_kernel function created by kernel_coder(). Requires 0 hyperparameters. Likely created using white_kernel_base() as an input.
+white_kernel function. Requires 0 hyperparameters.
 Use with include("src/kernels/white_kernel.jl").
 hyperparameters == []
 """

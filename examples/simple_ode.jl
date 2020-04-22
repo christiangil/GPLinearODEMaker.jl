@@ -15,7 +15,7 @@ noise2 = 0.2 .* ones(n)
 ys = collect(Iterators.flatten(zip(y1, y2)))
 noise = collect(Iterators.flatten(zip(noise1, noise2)))
 
-prob_def = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a0=[[1. 0.1];[0.1 1]])
+prob_def = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a0=[[1. 0];[0 1]])
 total_hyperparameters = append!(collect(Iterators.flatten(prob_def.a0)), [10])
 total_hyperparameters .*= (1 .+ 0.1 .* rand(length(total_hyperparameters)))
 workspace = GLOM.nlogL_matrix_workspace(prob_def, total_hyperparameters)
@@ -31,9 +31,21 @@ function h!(H::Matrix{T}, non_zero_hyper::Vector{T}) where T<:Real
     H[:, :] = GLOM.∇∇nlogL_GLOM!(workspace, prob_def, non_zero_hyper)
 end
 
+function optim_cb(x::OptimizationState)
+    println()
+    if x.iteration > 0
+        println("Iteration:     ", x.iteration)
+        println("Time so far:   ", x.metadata["time"], " s")
+        println("Currnet score: ", x.value)
+        println("Gradient norm: ", x.g_norm)
+        println()
+    end
+    return false
+end
+
 # @time result = optimize(f, initial_x, NelderMead()) # 26s
 # @time result = optimize(f, g!, initial_x, LBFGS()) # 40s
-@time result = optimize(f, g!, h!, initial_x, NewtonTrustRegion()) # 15s
+@time result = optimize(f, g!, h!, initial_x, NewtonTrustRegion(), Optim.Options(callback=optim_cb, g_tol=1e-6, iterations=50)) # 15s
 
 fit_total_hyperparameters = GLOM.reconstruct_total_hyperparameters(prob_def, result.minimizer)
 

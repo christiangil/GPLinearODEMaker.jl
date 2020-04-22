@@ -19,6 +19,7 @@ struct GLO{T1<:Real, T2<:Integer}
 	coeff_coeffs::AbstractArray{T2,4}
 	covariance::Array{T1, 3}  # the measurement covariance at all observations
 	has_covariance::Bool
+	kernel_changes_with_output::Bool
 
 	function GLO(
 		kernel::Function,
@@ -31,6 +32,7 @@ struct GLO{T1<:Real, T2<:Integer}
 		normals::Vector{T1} = ones(n_out),
 		a0::Matrix{T1} = ones(n_out, n_dif),
 		covariance::Array{T1, 3} = zeros(length(x_obs), n_out, n_out),
+		kernel_changes_with_output::Bool=false
 		) where {T1<:Real, T2<:Integer}
 
 		@assert size(a0) == (n_out, n_dif)
@@ -38,7 +40,7 @@ struct GLO{T1<:Real, T2<:Integer}
 		coeff_orders, coeff_coeffs = coefficient_orders(n_out, n_dif, a=a0)
 		has_covariance = (covariance != zeros(length(x_obs), n_out, n_out))
 
-		return GLO(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a0, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance)
+		return GLO(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a0, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance, kernel_changes_with_output)
 	end
 	function GLO(
 		kernel::Function,  # kernel function
@@ -54,9 +56,10 @@ struct GLO{T1<:Real, T2<:Integer}
 		coeff_orders::Array{T2,6},
 		coeff_coeffs::Array{T2,4},
 		covariance::Array{T1, 3},
-		has_covariance::Bool) where {T1<:Real, T2<:Integer}
+		has_covariance::Bool,
+		kernel_changes_with_output::Bool) where {T1<:Real, T2<:Integer}
 
-		@assert isfinite(kernel(ones(n_kern_hyper), randn(); dorder=zeros(Int64, 2 + n_kern_hyper)))  # make sure the kernel is valid by testing a sample input
+		@assert isfinite(kernel(ones(n_kern_hyper), randn(), zeros(Int64, 2 + n_kern_hyper)))  # make sure the kernel is valid by testing a sample input
 		@assert 0 < n_dif <= 3
 		@assert 0 < n_out
 		n_meas = length(x_obs)
@@ -70,7 +73,7 @@ struct GLO{T1<:Real, T2<:Integer}
 		@assert n_out == size(covariance, 2) == size(covariance, 3)
 		@assert (covariance != zeros(n_meas, n_out, n_out)) == has_covariance
 
-		return new{typeof(x_obs[1]),typeof(n_kern_hyper)}(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a0, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance)
+		return new{typeof(x_obs[1]),typeof(n_kern_hyper)}(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a0, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance, kernel_changes_with_output)
 	end
 end
 

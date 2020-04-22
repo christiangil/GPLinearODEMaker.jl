@@ -61,8 +61,10 @@ function kernel_coder(
     symbs = free_symbols(symbolic_kernel_original)
 
     δ_inds = findall(x -> x==δ, symbs)
-    @assert length(δ_inds) == 1
-    deleteat!(symbs, δ_inds[1])
+    @assert length(δ_inds) <= 1
+    if length(δ_inds)==1
+        deleteat!(symbs, δ_inds[1])
+    end
     π_inds = findall(x -> x==symbols("π_sym"), symbs)
     if length(π_inds) > 0
         deleteat!(symbs, π_inds[1])
@@ -84,20 +86,33 @@ hyperparameters == $symbs_str
 \"\"\"
 function $kernel_name(
     hyperparameters::Vector{<:Real},
-    δ::Real;
-    dorder::Vector{<:Integer}=zeros(Int64, length(hyperparameters) + 2))
+    δ::Real,
+    dorder::Vector{<:Integer};
+    shift_ind::Integer=0)
 
-    @assert length(hyperparameters)==$hyper_amount \"hyperparameters is the wrong length\"
-    dorder_len = $(hyper_amount + 2)
+    include_shift = shift_ind!=0
+    @assert length(hyperparameters)==$hyper_amount+Int(include_shift) \"hyperparameters is the wrong length\"
+    dorder_len = $(hyper_amount + 2) + Int(include_shift)
     @assert length(dorder)==dorder_len \"dorder is the wrong length\"
-    dorder2 = dorder[2]
-    @assert maximum(dorder) < 3 \"No more than two time derivatives for either t1 or t2 can be calculated\"
+    @assert maximum(dorder) < 3 \"No more than two derivatives for each time or hyperparameter can be calculated\"
 
-    dorder[2] = sum(dorder[1:2])\n\n""")
+    dorder2 = dorder[2]
+    dorder[2] += dorder[1]
+
+    if include_shift
+        dorder[2] += dorder[shift_ind+2]
+        δ += hyperparameters[shift_ind]
+        hyperparameters_view = view(hyperparameters, 1:$(hyper_amount+1) .!= shift_ind)
+        dorder_view = view(dorder, 2:dorder_len)
+        dorder_view = view(dorder_view, 1:(dorder_len-1) .!= (shift_ind+1))
+    else
+        hyperparameters_view = hyperparameters
+        dorder_view = view(dorder, 2:dorder_len)
+    end\n\n""")
 
     # map the hyperparameters that will be passed to this function to the symbol names
     for i in 1:(hyper_amount)
-        write(io, "    " * symbs_str[i] * " = hyperparameters[$i]\n")
+        write(io, "    " * symbs_str[i] * " = hyperparameters_view[$i]\n")
     end
     # if add_white_noise
     #     write(io, "    σ_white *= Int(δ == 0)\n")  # accounting for white noise only being on the diagonal
@@ -106,9 +121,10 @@ function $kernel_name(
 
     if cutoff_var!=""
         @assert cutoff_var in symbs_str
-        write(io, "    if abs(δ) > $cutoff_var\n")
-        write(io, "        return 0\n")
-        write(io, "    end\n\n")
+        write(io, """    if abs(δ) > $cutoff_var
+        dorder[2] = dorder2
+        return 0
+    end\n\n""")
     end
 
     abs_vars = String[]
@@ -123,12 +139,11 @@ function $kernel_name(
         end
     end
 
-    # δf has 5 derivatives (0-4) and the other symbols have 3 (0-2)
-    max_δ_derivs = 5  # (0-4)
-    max_hyper_derivs = 3  # (0-2)
+    max_δ_derivs = 7  # δf has 7 derivatives (0-(4+2), 4 from 2nd derivatives of GP and 2 from a possible time delay hyperparameter)
+    max_hyper_derivs = 3  # other symbols have 3 (0-2)
     # calculate all of the necessary derivations we need for the GLOM model
     # for two symbols (δ and a hyperparameter), dorders is of the form:
-    # [4 2; 3 2; 2 2; 1 2; 0 2; ... ]
+    # [6 2; 4 2; 3 2; 2 2; 1 2; 0 2; ... ]
     # where the dorders[n, :]==[dorder of δ, dorder of symbol 2]
     # can be made for any number of symbols
 
@@ -189,7 +204,7 @@ function $kernel_name(
 
             # println(symbolic_kernel_str)
 
-            write(io, "    if view(dorder, 2:dorder_len)==" * string(dorder) * "\n")
+            write(io, "    if dorder_view==" * string(dorder) * "\n")
             write(io, "        func =" * symbolic_kernel_str * "\n    end\n\n")
         end
 
