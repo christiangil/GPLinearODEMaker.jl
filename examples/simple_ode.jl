@@ -78,6 +78,6 @@ function make_plot(output::Integer; show_draws::Bool=true)
     return p
 end
 
-plot(make_plot(1), make_plot(2), layout=(2,1))
+plot(make_plot(1), make_plot(2), layout=(2,1), size= (1920,1080))
 
 savefig("test.png")
