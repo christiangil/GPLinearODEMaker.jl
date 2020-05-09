@@ -973,7 +973,7 @@ function include_kernel(kernel_name::AbstractString)
     if !occursin("_kernel", kernel_name)
         kernel_name *= "_kernel"
     end
-    return include(pathof(GLOM)[1:end-19] * kernel_name * ".jl")
+    return include(pathof(GLOM) * kernel_name * ".jl")
 end
 
 
