@@ -966,6 +966,18 @@ end
 
 
 """
+Tries to include the specified kernel, assuming it was included with GLOM
+Returns the kernel function and number of hyperparameters it uses
+"""
+function include_kernel(kernel_name::AbstractString)
+    if !occursin("_kernel", kernel_name)
+        kernel_name *= "_kernel"
+    end
+    return include(pathof(GLOM)[1:end-19] * kernel_name * ".jl")
+end
+
+
+"""
 Make it easy to run the covariance calculations on many processors
 Makes sure every worker has access to kernel function
 """
@@ -978,6 +990,21 @@ function prep_parallel_covariance(
     sendto(workers(), kernel_name=kernel_name)
     @everywhere include(kernel_path)
 end
+
+
+"""
+Make it easy to run the covariance calculations on many processors
+Makes sure every worker has access to kernel function
+"""
+function prep_parallel_covariance(
+    kernel_name::AbstractString;
+    add_procs::Integer=0)
+
+    prep_parallel(; add_procs=add_procs)
+    sendto(workers(), kernel_name=kernel_name)
+    @everywhere include_kernel(kernel_name)
+end
+
 
 
 "nlogL for GLOM GP"
