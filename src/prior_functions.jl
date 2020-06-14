@@ -102,12 +102,11 @@ end
 
 """
 Log of the Rayleigh PDF.
-Not properly normalized because of truncation
 """
 function log_Rayleigh(x::Real, σ::Real; d::Integer=0)
     @assert 0 <= d <= 2
     if d == 0
-        0 <= x <= 1 ? val = -(x * x / (2 * σ * σ)) + log(x / σ / σ) : val = -Inf
+        0 <= x <= 1 ? val = -(x * x / (2 * σ * σ)) + log(x / σ / σ) -  log(1 - exp(-1 / (2 * σ * σ))) : val = -Inf
     elseif d == 1
         0 <= x <= 1 ? val = 1 / x - x / σ / σ : val = 0
     elseif d == 2
