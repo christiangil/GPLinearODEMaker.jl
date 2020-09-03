@@ -77,4 +77,4 @@ or through the `pkg` REPL mode by typing
 
 If you use `GPLinearODEMaker.jl` in your work, please cite the BibTeX entry given in CITATION.bib
 
-The formula images in this README created with [this website](https://alexanderrodin.com/github-latex-markdown/)
+The formula images in this README created with [this website](https://tex-image-link-generator.herokuapp.com/)
