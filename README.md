@@ -60,9 +60,11 @@ using Optim
 
 For more details and options, see the documentation (WIP)
 
+You can read about the first usage of this package in [our paper](https://arxiv.org/abs/2009.01085)
+
 # Installation
 
-The package will be a registered package (by 4/24/2020), and can be installed with `Pkg.add`.
+GLOM is a registered package and can be installed with `Pkg.add`.
 
 ```julia
 julia> using Pkg; Pkg.add("GPLinearODEMaker")
