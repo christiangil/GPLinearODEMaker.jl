@@ -24,8 +24,8 @@ struct GLO{T1<:Real, T2<:Integer}
 	function GLO(
 		kernel::Function,
 		n_kern_hyper::T2,
-		n_out::T2,
 		n_dif::T2,
+		n_out::T2,
 		x_obs::Vector{T1},
 		y_obs::Vector{T1};
 		noise::Vector{T1} = zeros(length(y_obs)),
