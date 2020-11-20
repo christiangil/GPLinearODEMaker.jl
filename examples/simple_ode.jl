@@ -1,7 +1,8 @@
 using Pkg
-Pkg.activate(".")
-import GPLinearODEMaker
-GLOM = GPLinearODEMaker
+Pkg.activate("examples")
+Pkg.instantiate()
+
+import GPLinearODEMaker; GLOM = GPLinearODEMaker
 
 kernel, n_kern_hyper = include("../src/kernels/pp_kernel.jl")
 
@@ -56,6 +57,7 @@ n_meas = length(prob_def.x_obs)
 
 mean_GP, σ, mean_GP_obs, Σ = GLOM.GP_posteriors(prob_def, x_samp, fit_total_hyperparameters; return_mean_obs=true)
 
+#=
 n_show = 5
 show_curves = zeros(n_show, n_total_samp_points)
 L = GLOM.ridge_chol(Σ).L
@@ -74,10 +76,9 @@ function make_plot(output::Integer; show_draws::Bool=true)
             plot!(x_samp, show_curves[i, sample_output_indices], leg=false)
         end
     end
-    plot!(x_samp, mean_GP[sample_output_indices]; ribbon=σ[sample_output_indices], alpha = 0.3, leg=false)
+    plot!(x_samp, mean_GP[sample_output_indices]; ribbon=σ[sample_output_indices], alpha=0.3, leg=false)
     return p
 end
 
-plot(make_plot(1), make_plot(2), layout=(2,1), size= (1920,1080))
-
-savefig("test.png")
+plot(make_plot(1), make_plot(2), layout=(2,1), size=(1920,1080))
+=#

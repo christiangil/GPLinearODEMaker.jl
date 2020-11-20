@@ -121,10 +121,10 @@ function $kernel_name(
 
     if cutoff_var!=""
         @assert cutoff_var in symbs_str
-        write(io, """    if abs(δ) > $cutoff_var
-        dorder[2] = dorder2
-        return 0
-    end\n\n""")
+        write(io, "    if abs(δ) > $cutoff_var\n")
+        write(io, "        dorder[2] = dorder2\n")
+        write(io, "        return 0\n")
+        write(io, "    end\n\n")
     end
 
     abs_vars = String[]
