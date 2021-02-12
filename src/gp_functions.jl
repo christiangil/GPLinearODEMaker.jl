@@ -43,11 +43,11 @@ function covariance!(
         end
         return Symmetric(Σ)
     else
-        covariance!(Σ, kernel_func, x1list, x2list, kernel_hyperparameters, dorder, symmetric, same_x, equal_spacing)
+        _covariance!(Σ, kernel_func, x1list, x2list, kernel_hyperparameters, dorder, symmetric, same_x, equal_spacing)
     end
 end
 
-function covariance!(
+function _covariance!(
     Σ::SharedArray{T1,2},
     kernel_func::Function,
     x1list::Vector{T1},
@@ -83,7 +83,7 @@ function covariance!(
     end
 end
 
-function covariance!(
+function _covariance!(
     Σ::Matrix{T1},
     kernel_func::Function,
     x1list::Vector{T1},
@@ -123,14 +123,12 @@ function covariance(
     x1list::Vector{T1},
     x2list::Vector{T1},
     kernel_hyperparameters::Vector{T1};
-    dorder::Vector{T2}=zeros(Int64, 2 + length(kernel_hyperparameters)),
-    symmetric::Bool=false,
-    ) where {T1<:Real, T2<:Integer}
+    kwargs...) where {T1<:Real}
 
     if nworkers()>1
-        return covariance!(SharedArray{Float64}(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric)
+        return covariance!(SharedArray{Float64}(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; kwargs...)
     else
-        return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric)
+        return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; kwargs...)
     end
     # return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric)
 end
@@ -146,7 +144,7 @@ function covariance(
     x2list::Vector{<:Real},
     total_hyperparameters::Vector{<:Real};
     dΣdθs_total::Vector{<:Integer}=Int64[],
-    chol::Bool=false)
+    kwargs...)
 
     @assert all(dΣdθs_total .>= 0)
     @assert length(total_hyperparameters) == prob_def.n_kern_hyper + length(prob_def.a0)
@@ -244,7 +242,7 @@ function covariance(
     # return the symmetrized version of the covariance matrix
     # function corrects for numerical errors and notifies us if our matrix isn't
     # symmetric like it should be
-    return symmetric_A(Σ_rearranged; chol=chol)
+    return symmetric_A(Σ_rearranged; kwargs...)
     # if x1list == x2list
     #     if chol
     #         return ridge_chol(Symmetric(Σ))
@@ -260,8 +258,8 @@ end
 covariance(
     prob_def::GLO,
     total_hyperparameters::Vector{<:Real};
-    dΣdθs_total::Vector{<:Integer}=Int64[]
-    ) = covariance(prob_def, prob_def.x_obs, prob_def.x_obs, total_hyperparameters; dΣdθs_total=dΣdθs_total)
+    kwargs...
+    ) = covariance(prob_def, prob_def.x_obs, prob_def.x_obs, total_hyperparameters; kwargs...)
 
 
 "adding measurement noise to Σ_obs"
@@ -269,10 +267,9 @@ function Σ_observations(
     Σ::Symmetric{T, Matrix{T}},
     measurement_noise::Vector{T};
     return_both::Bool=false,
-    ignore_asymmetry::Bool=false
-    ) where {T<:Real}
+    kwargs...) where {T<:Real}
 
-    Σ_obs = symmetric_A(Σ + Diagonal(measurement_noise .* measurement_noise); ignore_asymmetry=ignore_asymmetry, chol=true)
+    Σ_obs = symmetric_A(Σ + Diagonal(measurement_noise .* measurement_noise); chol=true, kwargs...)
     return return_both ? (Σ_obs, Σ) : Σ_obs
 end
 
@@ -280,8 +277,8 @@ end
 function Σ_observations(
     Σ::Symmetric{T, Matrix{T}},
     measurement_covariance::Array{T, 3};
-    return_both::Bool=false
-    ) where {T<:Real}
+    return_both::Bool=false,
+    kwargs...) where {T<:Real}
 
     n_meas = size(measurement_covariance, 1)
     n_out = size(measurement_covariance, 2)
@@ -295,7 +292,7 @@ function Σ_observations(
     for i in 1:n_meas
         Σ_obs[1 + (i - 1) * n_out : i * n_out, 1 + (i - 1) * n_out : i * n_out] += measurement_covariance[i, :, :]
     end
-    Σ_obs = symmetric_A(Σ_obs; chol=true)
+    Σ_obs = symmetric_A(Σ_obs; chol=true, kwargs...)
     return return_both ? (Σ_obs, Σ) : Σ_obs
 end
 
@@ -363,7 +360,7 @@ function covariance_permutations(
     ) where {T<:Real}
 
     Σ_samp = covariance(kernel_func, x_samp, x_samp, kernel_hyperparameters)
-    Σ_samp_obs = covariance(kernel_func, x_samp, x_obs, kernel_hyperparameters)
+    Σ_samp_obs = covariance(kernel_func, x_samp, x_obs, kernel_hyperparameters; ignore_asymmetry=true)
     Σ_obs_samp = transpose(Σ_samp_obs)
     if return_both
         Σ_obs, Σ_obs_raw = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; return_both=return_both)
@@ -383,7 +380,7 @@ function covariance_permutations(
     ) where {T<:Real}
 
     Σ_samp = covariance(prob_def, x_samp, x_samp, total_hyperparameters)
-    Σ_samp_obs = covariance(prob_def, x_samp, prob_def.x_obs, total_hyperparameters)
+    Σ_samp_obs = covariance(prob_def, x_samp, prob_def.x_obs, total_hyperparameters; ignore_asymmetry=true)
     Σ_obs_samp = transpose(Σ_samp_obs)
     if return_both
         Σ_obs, Σ_obs_raw = Σ_observations(prob_def, total_hyperparameters; return_both=return_both)
@@ -404,7 +401,7 @@ function GP_posteriors_from_covariances(
     Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
     Σ_obs_raw::Symmetric{T,Matrix{T}};
     return_Σ::Bool=true,
-    chol::Bool=false
+    kwargs...
     ) where {T<:Real}
 
     # posterior mean calcuation from RW alg. 2.1
@@ -422,7 +419,7 @@ function GP_posteriors_from_covariances(
 
     # posterior covariance calculation is from eq. 2.24 of RW
     if return_Σ
-        Σ_post = symmetric_A(Σ_samp - (Σ_samp_obs * (Σ_obs \ Σ_obs_samp)), chol=chol)
+        Σ_post = symmetric_A(Σ_samp - (Σ_samp_obs * (Σ_obs \ Σ_obs_samp)); kwargs...)
         return mean_post, σ, mean_post_obs, Σ_post
     else
         return mean_post, σ, mean_post_obs
@@ -439,7 +436,7 @@ function GP_posteriors_from_covariances(
     Σ_samp_obs::Union{Symmetric{T,Matrix{T}},Matrix{T}},
     Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}};
     return_Σ::Bool=true,
-    chol::Bool=false
+    kwargs...
     ) where {T<:Real}
 
     # posterior mean calcuation from RW alg. 2.1
@@ -456,7 +453,7 @@ function GP_posteriors_from_covariances(
 
     # posterior covariance calculation is from eq. 2.24 of RW
     if return_Σ
-        Σ_post = symmetric_A(Σ_samp - (Σ_samp_obs * (Σ_obs \ Σ_obs_samp)), chol=chol)
+        Σ_post = symmetric_A(Σ_samp - (Σ_samp_obs * (Σ_obs \ Σ_obs_samp)); kwargs...)
         return mean_post, σ, Σ_post
     else
         return mean_post, σ
@@ -472,17 +469,15 @@ function GP_posteriors(
     x_samp::Vector{T},
     measurement_noise::Vector{T},
     total_hyperparameters::Vector{T};
-    return_Σ::Bool=true,
-    chol::Bool=false,
-    return_mean_obs::Bool=false
-    ) where {T<:Real}
+    return_mean_obs::Bool=false,
+    kwargs...) where {T<:Real}
 
     if return_mean_obs
         (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw) = covariance_permutations(kernel_func, x_obs, x_samp, measurement_noise, total_hyperparameters; return_both=return_mean_obs)
-        return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw; return_Σ=return_Σ, chol=chol)
+        return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw; kwargs...)
     else
         (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp) = covariance_permutations(kernel_func, x_obs, x_samp, measurement_noise, total_hyperparameters; return_both=return_mean_obs)
-        return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp; return_Σ=return_Σ, chol=chol)
+        return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp; kwargs...)
     end
 end
 
@@ -490,18 +485,16 @@ function GP_posteriors(
     prob_def::GLO,
     x_samp::Vector{T},
     total_hyperparameters::Vector{T};
-    return_Σ::Bool=true,
-    chol::Bool=false,
     return_mean_obs::Bool=false,
-    y_obs::Vector{T}=prob_def.y_obs
-    ) where {T<:Real}
+    y_obs::Vector{T}=prob_def.y_obs,
+    kwargs...) where {T<:Real}
 
     if return_mean_obs
         (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw) = covariance_permutations(prob_def, x_samp, total_hyperparameters; return_both=return_mean_obs)
-        return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw; return_Σ=return_Σ, chol=chol)
+        return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw; kwargs...)
     else
         (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp) = covariance_permutations(prob_def, x_samp, total_hyperparameters; return_both=return_mean_obs)
-        return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp; return_Σ=return_Σ, chol=chol)
+        return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp; kwargs...)
     end
 
 end
@@ -651,8 +644,8 @@ float: the negative log marginal likelihood
 """
 function nlogL(
     Σ::Cholesky{T,Matrix{T}},
-    y::Vector{T},
-    α::Vector{T};
+    y::Vector{T};
+    α::Vector{T} = Σ \ y,
     nlogL_normalization::T=logdet(Σ)+length(y)*log(2*π)
     ) where {T<:Real}
 
@@ -669,8 +662,6 @@ function nlogL(
     return (data_fit + nlogL_normalization) / 2
 
 end
-nlogL(Σ_obs, y; nlogL_normalization=logdet(Σ_obs)+length(y)*log(2*π)) =
-    nlogL(Σ_obs, y, Σ_obs \ y; nlogL_normalization=nlogL_normalization)
 
 """
 First partial derivative of the GP negative log marginal likelihood w.r.t. GP
@@ -939,9 +930,9 @@ end
 function calculate_shared_∇nlogL_matrices(
     prob_def::GLO,
     non_zero_hyperparameters::Vector{<:Real};
-    Σ_obs::Cholesky{T,Matrix{T}} where T<:Real=Σ_observations(prob_def, reconstruct_total_hyperparameters(prob_def, non_zero_hyperparameters), ignore_asymmetry=true))
+    kwargs...)
 
-    total_hyperparameters, Σ_obs, = calculate_shared_nlogL_matrices(prob_def, non_zero_hyperparameters; Σ_obs=Σ_obs)
+    total_hyperparameters, Σ_obs = calculate_shared_nlogL_matrices(prob_def, non_zero_hyperparameters; kwargs...)
 
     βs = [Σ_obs \ covariance(prob_def, total_hyperparameters; dΣdθs_total=[i]) for i in prob_def.non_zero_hyper_inds]
 
@@ -984,9 +975,9 @@ Makes sure every worker has access to kernel function
 function prep_parallel_covariance(
     kernel_name::AbstractString,
     kernel_path::AbstractString;
-    add_procs::Integer=0)
+    kwargs...)
 
-    prep_parallel(; add_procs=add_procs)
+    prep_parallel(; kwargs...)
     sendto(workers(), kernel_name=kernel_name)
     @everywhere include(kernel_path)
 end
@@ -998,9 +989,9 @@ Makes sure every worker has access to kernel function
 """
 function prep_parallel_covariance(
     kernel_name::AbstractString;
-    add_procs::Integer=0)
+    kwargs...)
 
-    prep_parallel(; add_procs=add_procs)
+    prep_parallel(; kwargs...)
     sendto(workers(), kernel_name=kernel_name)
     @everywhere include_kernel(kernel_name)
 end
@@ -1011,12 +1002,11 @@ end
 function nlogL_GLOM(
     prob_def::GLO,
     total_hyperparameters::Vector{T};
-    Σ_obs::Cholesky{T,Matrix{T}}=Σ_observations(prob_def, reconstruct_total_hyperparameters(prob_def, total_hyperparameters); ignore_asymmetry=true),
-    y_obs::Vector{T}=copy(prob_def.y_obs)
-    ) where {T<:Real}
+    y_obs::Vector{T}=copy(prob_def.y_obs),
+    kwargs...) where {T<:Real}
 
     total_hyperparameters, Σ_obs = calculate_shared_nlogL_matrices(
-        prob_def, remove_zeros(total_hyperparameters); Σ_obs=Σ_obs)
+        prob_def, remove_zeros(total_hyperparameters); kwargs...)
 
     return nlogL(Σ_obs, y_obs)
 end
@@ -1039,12 +1029,11 @@ end
 function ∇nlogL_GLOM(
     prob_def::GLO,
     total_hyperparameters::Vector{T};
-    Σ_obs::Cholesky{T,Matrix{T}}=Σ_observations(prob_def, reconstruct_total_hyperparameters(prob_def, total_hyperparameters); ignore_asymmetry=true),
-    y_obs::Vector{T}=copy(prob_def.y_obs)
-    ) where {T<:Real}
+    y_obs::Vector{T}=copy(prob_def.y_obs),
+    kwargs...) where {T<:Real}
 
     total_hyperparameters, Σ_obs, βs = calculate_shared_∇nlogL_matrices(
-        prob_def, remove_zeros(total_hyperparameters); Σ_obs=Σ_obs)
+        prob_def, remove_zeros(total_hyperparameters); kwargs...)
 
     return ∇nlogL(y_obs, Σ_obs \ y_obs, βs)
 
@@ -1096,12 +1085,11 @@ end
 function ∇∇nlogL_GLOM(
     prob_def::GLO,
     total_hyperparameters::Vector{T};
-    Σ_obs::Cholesky{T,Matrix{T}}=Σ_observations(prob_def, reconstruct_total_hyperparameters(prob_def, total_hyperparameters); ignore_asymmetry=true),
-    y_obs::Vector{T}=copy(prob_def.y_obs)
-    ) where {T<:Real}
+    y_obs::Vector{T}=copy(prob_def.y_obs),
+    kwargs...) where {T<:Real}
 
     total_hyperparameters, Σ_obs, βs = calculate_shared_∇nlogL_matrices(
-        prob_def, remove_zeros(total_hyperparameters); Σ_obs=Σ_obs)
+        prob_def, remove_zeros(total_hyperparameters); kwargs...)
 
     return ∇∇nlogL_GLOM(prob_def, total_hyperparameters, Σ_obs, y_obs, Σ_obs \ y_obs, βs)
 

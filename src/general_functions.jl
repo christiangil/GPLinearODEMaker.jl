@@ -2,7 +2,7 @@
 function symmetric_A(A::Union{Matrix{T},Symmetric{T,Matrix{T}}}; ignore_asymmetry::Bool=false, chol::Bool=false) where {T<:Real}
 
     # an arbitrary threshold that is meant to catch numerical errors
-    thres = maximum([1e-6 * maximum(abs.(A)), 1e-8])
+    thres = max(1e-6 * maximum(abs.(A)), 1e-8)
 
     if size(A, 1) == size(A, 2)
         max_dif = maximum(abs.(A - transpose(A)))
@@ -14,11 +14,13 @@ function symmetric_A(A::Union{Matrix{T},Symmetric{T,Matrix{T}}}; ignore_asymmetr
             # return the symmetrized version of the matrix
             A = symmetrize_A(A)
         else
-            println("Array dimensions match, but the max dif ($max_dif) is greater than the threshold ($thres)")
+            @warn "Array dimensions match, but the max dif ($max_dif) is greater than the threshold ($thres)"
             chol = false
         end
     else
-        println("Array dimensions do not match. The matrix can't be symmetric")
+        if !ignore_asymmetry
+            @warn "Array dimensions do not match. The matrix can't be symmetric"
+        end
         chol = false
     end
 
@@ -138,7 +140,7 @@ function log_laplace_approximation(
     H::Union{Symmetric{T,Matrix{T}},Matrix{T}},
     g::Real,
     logh::Real;
-    λ = 1
+    λ::Real=1
     ) where {T<:Real}
 
     @assert size(H, 1) == size(H, 2)
