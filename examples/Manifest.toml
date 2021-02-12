@@ -100,9 +100,9 @@ version = "6.1.2+6"
 
 [[GPLinearODEMaker]]
 deps = ["Distributed", "IterativeSolvers", "LinearAlgebra", "Random", "SharedArrays", "SpecialFunctions", "Statistics", "SymEngine"]
-git-tree-sha1 = "9c7103e9ee419a79673172430486e98c4963cf03"
+git-tree-sha1 = "d1dd24ff450b0aaa0810d06cbb47f68922cf16b0"
 uuid = "27ef9b34-1325-4cec-ba33-00f2f4637873"
-version = "0.1.4"
+version = "0.1.5"
 
 [[IfElse]]
 git-tree-sha1 = "28e837ff3e7a6c3cdb252ce49fb412c8eb3caeef"
@@ -115,9 +115,9 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[IterativeSolvers]]
 deps = ["LinearAlgebra", "Printf", "Random", "RecipesBase", "SparseArrays"]
-git-tree-sha1 = "704eee044a41b0e7e8417f7dd2a6b6b5361afd5f"
+git-tree-sha1 = "6f5ef3206d9dc6510a8b8e2334b96454a2ade590"
 uuid = "42fd0dbc-a981-5370-80f2-aaf504508153"
-version = "0.8.5"
+version = "0.9.0"
 
 [[JLLWrappers]]
 git-tree-sha1 = "a431f5f2ca3f4feef3bd7a5e94b8b8d4f2f647a0"

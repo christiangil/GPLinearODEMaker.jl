@@ -34,9 +34,9 @@ function pp_kernel(
     λ = hyperparameters_view[1]
 
     if abs(δ) > λ
-    dorder[2] = dorder2
-    return 0
-end
+        dorder[2] = dorder2
+        return 0
+    end
 
     dabs_δ = powers_of_negative_one(δ < 0)  # store derivative of abs()
     abs_δ = abs(δ)
