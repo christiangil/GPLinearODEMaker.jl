@@ -4,7 +4,7 @@ Pkg.instantiate()
 
 import GPLinearODEMaker; GLOM = GPLinearODEMaker
 
-kernel, n_kern_hyper = GLOM.include_kernel("pp")
+kernel, n_kern_hyper = GLOM.include_kernel("m52")
 
 n = 100
 xs = 20 .* sort(rand(n))

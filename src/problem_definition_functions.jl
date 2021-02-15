@@ -79,20 +79,26 @@ end
 
 
 function normalize_problem_definition!(prob_def::GLO)
-	n_obs = length(prob_def.x_obs)
 	renorms = ones(prob_def.n_out)
 	for i in 1:prob_def.n_out
 		inds = (i:prob_def.n_out:length(prob_def.y_obs))
 		prob_def.y_obs[inds] .-= mean(prob_def.y_obs[inds])
 		renorms[i] = std(prob_def.y_obs[inds])
-		# println(renorm)
+	end
+	normalize_problem_definition!(prob_def, renorms)
+end
+
+function normalize_problem_definition!(prob_def::GLO, renorms::Vector)
+	@assert length(renorms) == prob_def.n_out
+	for i in 1:prob_def.n_out
+		inds = (i:prob_def.n_out:length(prob_def.y_obs))
 		prob_def.normals[i] *= renorms[i]
 		prob_def.y_obs[inds] /= renorms[i]
 		prob_def.noise[inds] /= renorms[i]
 	end
 	if prob_def.has_covariance
 		renorm_mat = renorms .* transpose(renorms)
-		for i in 1:n_obs
+		for i in 1:length(prob_def.x_obs)
 			prob_def.covariance[i, :, :] ./= renorm_mat
 		end
 	end
