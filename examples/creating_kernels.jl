@@ -2,6 +2,20 @@ using Pkg
 Pkg.activate("examples")
 Pkg.instantiate()
 
+
+function help(s)
+    Pkg.activate(s)
+    Pkg.free("SymEngine")
+    Pkg.rm("SymEngine")
+    Pkg.add(name="SymEngine")# , version="0.6")
+    # Pkg.pin("SymEngine")
+end
+
+help(".")
+help("examples")
+
+Pkg.status("SymEngine")
+
 import GPLinearODEMaker; GLOM = GPLinearODEMaker
 using SymEngine
 
