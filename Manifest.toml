@@ -9,11 +9,11 @@ version = "1.3.0"
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
-[[ChainRulesCore]]
-deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "d3d0a4e0d5bc03a6c97f4d249c8a471fc20a2f33"
-uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "0.9.28"
+[[BinaryProvider]]
+deps = ["Libdl", "Logging", "SHA"]
+git-tree-sha1 = "ecdec412a9abc8db54c0efc5548c64dfce072058"
+uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
+version = "0.5.10"
 
 [[Compat]]
 deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
@@ -38,12 +38,6 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 [[Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
-
-[[GMP_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "15abc5f976569a1c9d651aff02f7222ef305eb2a"
-uuid = "781609d7-10c4-51f6-84f2-b8444358ff6d"
-version = "6.1.2+6"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -73,18 +67,6 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
-
-[[MPC_jll]]
-deps = ["GMP_jll", "Libdl", "MPFR_jll", "Pkg"]
-git-tree-sha1 = "583d9bc863ad491571369212b9a8047219a0015d"
-uuid = "2ce0c516-f11f-5db3-98ad-e0e1048fbd70"
-version = "1.1.0+0"
-
-[[MPFR_jll]]
-deps = ["GMP_jll", "Libdl", "Pkg"]
-git-tree-sha1 = "301ce96952df90bbaa2c66112b7c1f15ced2b55b"
-uuid = "3a97d323-0669-5f0c-9066-3539efd106a3"
-version = "4.1.0+1"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -116,9 +98,9 @@ deps = ["Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[RecipesBase]]
-git-tree-sha1 = "b3fb709f3c97bfc6e948be68beeecb55a0b340ae"
+git-tree-sha1 = "b4ed4a7f988ea2340017916f7c9e5d7560b52cae"
 uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-version = "1.1.1"
+version = "0.8.0"
 
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -138,26 +120,21 @@ deps = ["LinearAlgebra", "Random"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[SpecialFunctions]]
-deps = ["ChainRulesCore", "OpenSpecFun_jll"]
-git-tree-sha1 = "75394dbe2bd346beeed750fb02baa6445487b862"
+deps = ["OpenSpecFun_jll"]
+git-tree-sha1 = "d8d8b8a9f4119829410ecd706da4cc8594a1e020"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "1.2.1"
+version = "0.10.3"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[SymEngine]]
-deps = ["Compat", "Libdl", "LinearAlgebra", "RecipesBase", "SpecialFunctions", "SymEngine_jll"]
-git-tree-sha1 = "a27a507f5092a77b0619721c6f852a5f634fc52f"
+deps = ["BinaryProvider", "Compat", "Libdl", "RecipesBase", "SpecialFunctions"]
+git-tree-sha1 = "f5cb02e64d8cc4bbe3230ed28b5c4b9f763fada9"
+pinned = true
 uuid = "123dc426-2d89-5057-bbad-38513e3affd8"
-version = "0.8.3"
-
-[[SymEngine_jll]]
-deps = ["GMP_jll", "Libdl", "MPC_jll", "MPFR_jll", "Pkg"]
-git-tree-sha1 = "4dacada8e05ac49eb768219f8d02bc6b608627fb"
-uuid = "3428059b-622b-5399-b16f-d347a77089a4"
-version = "0.6.0+1"
+version = "0.6.0"
 
 [[Test]]
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]

@@ -1,4 +1,3 @@
 [deps]
-GPLinearODEMaker = "27ef9b34-1325-4cec-ba33-00f2f4637873"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
