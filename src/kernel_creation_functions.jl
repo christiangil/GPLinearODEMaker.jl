@@ -187,20 +187,7 @@ function $kernel_name(
                 # for i in 1:2
                 #     symbolic_kernel = subs(symbolic_kernel, dabs_var^(i*2)=>1)
                 # end
-<<<<<<< HEAD
                 # because it solves i.e. dabs_var^(i*2)=>1 is seen as dabs_var=1
-=======
-                # because it double counts i.e. dabs_var^3 is seen as
-                # (dabs_var*dabs_var)*dabs_var and dabs_var*(dabs_var*dabs_var)
-                # and is simplified to 1
-                # BUT you can take factors of dabs_var^2 out (even with double
-                # counting error) using the following:
-                for i in 1:2
-                    symbolic_kernel = subs(symbolic_kernel, dabs_var^3=>dabs_var)
-                end
-                # symbolic_kernel = subs(symbolic_kernel, dabs_var^2=>1)
-
->>>>>>> 28cf6f266ec3625ed107fba2ad605a2a8e59b9e7
                 symbolic_kernel = subs(symbolic_kernel, abs(variable)=>abs_var)
             end
 
