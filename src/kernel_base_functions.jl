@@ -153,8 +153,8 @@ function rm52_kernel_base(hyperparameters::Vector{<:Number}, δ::Number)
     α, μ = hyperparameters
 
     x = sqrt(5) * abs(δ)
-    thing = x + α / μ
-    return thing ^ -α * (α * (α + x * (2 + α) * μ) + x * x * (1 + α) * (3 + α) * μ * μ / 3) / (thing * thing * μ * μ)
+    y = x + α / μ
+    return y ^ -α * (α * (α + x * (2 + α) * μ) + x * x * (1 + α) * (3 + α) * μ * μ / 3) / (y * y * μ * μ)
 end
 
 
@@ -187,11 +187,3 @@ end
 #
 #     return besselj(nu + 1, λ * δ) / (δ ^ (-n * (nu + 1)))
 # end
-
-
-function cosine_kernel_base(hyperparameters::Number, δ::Number)
-    @assert length(hyperparameters) == 1 "incompatible amount of hyperparameters passed"
-    λ = hyperparameters
-
-    return cos(2 * π * δ / λ)
-end

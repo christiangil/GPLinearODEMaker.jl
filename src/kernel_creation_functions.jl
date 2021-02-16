@@ -183,6 +183,10 @@ function $kernel_name(
                 for i in 2:6
                     symbolic_kernel = subs(symbolic_kernel, diff(abs(variable), variable, i)=>0)
                 end
+                # symbolic_kernel = subs(symbolic_kernel, dabs_var^3=>dabs_var)
+                # can't include the lower simplification because it double counts
+                # i.e. dabs_var^3 is seen as (dabs_var*dabs_var)*dabs_var
+                # dabs_var*(dabs_var*dabs_var) and is simplified to 1
                 # for i in 1:2
                 #     symbolic_kernel = subs(symbolic_kernel, dabs_var^(i*2)=>1)
                 # end

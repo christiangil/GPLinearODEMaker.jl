@@ -64,8 +64,10 @@ GLOM.kernel_coder(GLOM.rm52_kernel_base([α, μ], δ), "rm52")
 @vars δ λ α
 GLOM.kernel_coder(GLOM.rq_kernel_base([α, λ], δ), "rq"; periodic_var="δ")
 
-@vars δ λ
-GLOM.kernel_coder(GLOM.cosine_kernel_base(λ, δ), "cos")
+# kernel_coder can use π_sym to know not to numerically evaluate π
+@vars δ λ π_sym
+custom_cos(λ, δ) = cos(2 * π_sym * δ / λ)
+GLOM.kernel_coder(custom_cos(λ, δ), "cos")
 
 @vars σ
 GLOM.kernel_coder(σ^2, "scale")
