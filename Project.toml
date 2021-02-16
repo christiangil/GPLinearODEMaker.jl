@@ -16,8 +16,8 @@ SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
 [compat]
 IterativeSolvers = "0.8, 0.9"
 SpecialFunctions = "0.10.0, 1.0"
+SymEngine = "0.6, 0.8"
 julia = "1"
-SymEngine = "0.6" 
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
