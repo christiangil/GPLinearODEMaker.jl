@@ -5,7 +5,7 @@ Pkg.instantiate()
 
 function help(s)
     Pkg.activate(s)
-    Pkg.free("SymEngine")
+    # Pkg.free("SymEngine")
     Pkg.rm("SymEngine")
     Pkg.add(name="SymEngine")# , version="0.6")
     # Pkg.pin("SymEngine")
@@ -15,6 +15,7 @@ help(".")
 help("examples")
 
 Pkg.status("SymEngine")
+Pkg.status("GPLinearODEMaker")
 
 import GPLinearODEMaker; GLOM = GPLinearODEMaker
 using SymEngine
@@ -29,6 +30,9 @@ GLOM.kernel_coder(GLOM.matern52_kernel_base(λ, δ), "m52")
 
 @vars δ λ
 GLOM.kernel_coder(GLOM.pp_kernel_base(λ, δ), "pp"; cutoff_var="λ")
+
+# using Juno
+# Juno.@enter GLOM.kernel_coder(GLOM.pp_kernel_base(λ, δ), "pp"; cutoff_var="λ")
 
 @vars δ λ1 λ2 sratio
 GLOM.kernel_coder(GLOM.matern52_kernel_base(λ1, δ) + sratio * sratio * GLOM.matern52_kernel_base(λ2, δ), "m52_m52")

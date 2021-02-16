@@ -129,10 +129,10 @@ function $kernel_name(
 
     abs_vars = String[]
     for i in append!(["δ"], symbs_str)
-        println("abs($i)")
+        # println("abs($i)")
         if occursin("abs($i)", SymEngine.toString(symbolic_kernel_original))
             append!(abs_vars, [i])
-            println("found something")
+            # println("found something")
             # write(io, "    dabsδ = sign(δ)  # store derivative of abs()\n")
             write(io, "    dabs_$i = powers_of_negative_one($i < 0)  # store derivative of abs()\n")
             write(io, "    abs_$i = abs($i)\n\n")
@@ -183,9 +183,9 @@ function $kernel_name(
                 for i in 2:6
                     symbolic_kernel = subs(symbolic_kernel, diff(abs(variable), variable, i)=>0)
                 end
-                for i in 1:2
-                    symbolic_kernel = subs(symbolic_kernel, dabs_var^(i*2)=>1)
-                end
+                # for i in 1:2
+                #     symbolic_kernel = subs(symbolic_kernel, dabs_var^(i*2)=>1)
+                # end
                 symbolic_kernel = subs(symbolic_kernel, abs(variable)=>abs_var)
             end
 
