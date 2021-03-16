@@ -1,9 +1,26 @@
 """
-Estimate the covariance derivatives with forward differences
-"""
-function est_dΣdθ(prob_def::GLO, kernel_hyperparameters::Vector{T}; return_est::Bool=true, return_anal::Bool=false, return_dif::Bool=false, return_bool::Bool=false, dif::Real=1e-6, print_stuff::Bool=true) where {T<:Real}
+    est_dΣdθ(glo, kernel_hyperparameters; return_est=true, return_anal=false, return_dif=false, return_bool=false, dif=1e-6, print_stuff=true)
 
-    total_hyperparameters = append!(collect(Iterators.flatten(prob_def.a0)), kernel_hyperparameters)
+Estimate the covariance derivatives of `glo` (a GLOM model) at
+`kernel_hyperparameters`with forward differences
+
+# Keyword Arguments
+- `return_est::Bool=true`: Add the numerically estimated dΣdθs to the output
+- `return_anal::Bool=false`: Add the analytical dΣdθs to the output
+- `return_dif::Bool=false`: Add the difference between the dΣdθs to the output
+- `return_bool::Bool=false`: Return just a similarity Boolean
+- `dif::Real=1e-6`: The step size used in the forward difference method
+- `print_stuff::Bool=true`: Whether to print things
+
+# Output
+- If `return_bool==true`, returns a Boolean for whether the analytical and
+numerical estimates for the dΣdθs are approximately the same.
+- Else returns a vector with some combination of the numerically estimated
+dΣdθs, analytical dΣdθs, and differences between them
+"""
+function est_dΣdθ(glo::GLO, kernel_hyperparameters::Vector{T}; return_est::Bool=true, return_anal::Bool=false, return_dif::Bool=false, return_bool::Bool=false, dif::Real=1e-6, print_stuff::Bool=true) where {T<:Real}
+
+    total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), kernel_hyperparameters)
 
     if print_stuff
         println()
@@ -11,19 +28,19 @@ function est_dΣdθ(prob_def::GLO, kernel_hyperparameters::Vector{T}; return_est
         println("hyperparameters: ", total_hyperparameters)
     end
 
-    x = prob_def.x_obs
+    x = glo.x_obs
     return_vec = []
-    coeff_orders = coefficient_orders(prob_def.n_out, prob_def.n_dif, a=prob_def.a0)
+    coeff_orders = coefficient_orders(glo.n_out, glo.n_dif, a=glo.a0)
 
     # construct estimated dΣdθs
     if return_est || return_dif || return_bool
-        val = covariance(prob_def, total_hyperparameters)
-        est_dΣdθs = zeros(length(total_hyperparameters), prob_def.n_out * length(x), prob_def.n_out * length(x))
+        val = covariance(glo, total_hyperparameters)
+        est_dΣdθs = zeros(length(total_hyperparameters), glo.n_out * length(x), glo.n_out * length(x))
         for i in 1:length(total_hyperparameters)
             if total_hyperparameters[i]!=0
                 hold = copy(total_hyperparameters)
                 hold[i] += dif
-                est_dΣdθs[i, :, :] =  (covariance(prob_def, hold) - val) / dif
+                est_dΣdθs[i, :, :] =  (covariance(glo, hold) - val) / dif
             end
         end
         if return_est; append!(return_vec, [est_dΣdθs]) end
@@ -31,9 +48,9 @@ function est_dΣdθ(prob_def::GLO, kernel_hyperparameters::Vector{T}; return_est
 
     # construct analytical dΣdθs
     if return_anal || return_dif || return_bool
-        anal_dΣdθs = zeros(length(total_hyperparameters), prob_def.n_out * length(x), prob_def.n_out * length(x))
+        anal_dΣdθs = zeros(length(total_hyperparameters), glo.n_out * length(x), glo.n_out * length(x))
         for i in 1:length(total_hyperparameters)
-            anal_dΣdθs[i, :, :] =  covariance(prob_def, total_hyperparameters; dΣdθs_total=[i])
+            anal_dΣdθs[i, :, :] =  covariance(glo, total_hyperparameters; dΣdθs_total=[i])
         end
         if return_anal; append!(return_vec, [anal_dΣdθs]) end
     end
@@ -66,13 +83,30 @@ function est_dΣdθ(prob_def::GLO, kernel_hyperparameters::Vector{T}; return_est
 
 end
 
+"""
+    est_∇(f::Function, inputs::Vector{<:Real}; dif=1e-7, ignore_0_inputs=false)
+
+Estimate the gradient of `f` at `inputs` with forward differences
+
+# Examples
+```jldoctest
+julia> f(x) = x[1] + x[2]^2;
+
+julia> isapprox([1,4], GPLinearODEMaker.est_∇(f, [2, 2.]); rtol=1e-5)
+true
+```
+"""
 function est_∇(f::Function, inputs::Vector{<:Real}; dif::Real=1e-7, ignore_0_inputs::Bool=false)
     # original value
     val = f(inputs)
 
     #estimate gradient
     j = 1
-    grad = zeros(length(remove_zeros(inputs)))
+    if ignore_0_inputs
+        grad = zeros(length(remove_zeros(inputs)))
+    else
+        grad = zeros(length(inputs))
+    end
     for i in 1:length(inputs)
         if !ignore_0_inputs || inputs[i]!=0
             hold = copy(inputs)
@@ -86,28 +120,29 @@ end
 
 
 """
-Estimate the gradient of nlogL_GLOM() with forward differences
+    est_∇nlogL_GLOM(glo, total_hyperparameters; dif=1e-7)
 
-Parameters:
-
-prob_def (GLO): A structure that holds all of the relevant
-    information for constructing the model used in the GLOM et al. 2017+ paper
-total_hyperparameters (vector): The hyperparameters for the GP model, including
-    both the coefficient hyperparameters and the kernel hyperparameters
-dif (float): How much to perturb the hyperparameters
-
-Returns:
-vector: An estimate of the gradient
-
+Estimate the gradient of `nlogL_GLOM(glo, total_hyperparameters)` with forward
+differences
 """
-function est_∇nlogL_GLOM(prob_def::GLO, total_hyperparameters::Vector{T}; dif::Real=1e-7) where {T<:Real}
-
-    f(inputs) = nlogL_GLOM(prob_def, inputs)
+function est_∇nlogL_GLOM(glo::GLO, total_hyperparameters::Vector{T}; dif::Real=1e-7) where {T<:Real}
+    f(inputs) = nlogL_GLOM(glo, inputs)
     return est_∇(f, total_hyperparameters; dif=dif, ignore_0_inputs=true)
-
 end
 
+"""
+    test_∇(est_G, G; print_stuff=true, function_name="function")
 
+Check if two gradient vectors (`est_G` and `G`) are approximately the same
+
+# Examples
+```jldoctest
+julia> GPLinearODEMaker.test_∇([1., 2, 3], [1.0001, 2, 3]; print_stuff=false)
+true
+julia> GPLinearODEMaker.test_∇([1., 2, 3], [0., 2, 3]; print_stuff=false)
+false
+```
+"""
 function test_∇(est_G::Vector{T}, G::Vector{T}; print_stuff::Bool=true, function_name::String="function") where {T<:Real}
 
     if print_stuff
@@ -122,7 +157,9 @@ function test_∇(est_G::Vector{T}, G::Vector{T}; print_stuff::Bool=true, functi
     no_mismatch = true
     for i in 1:length(G)
         if !isapprox(G[i], est_G[i], rtol=5e-2)
-            println("mismatch df/dθ" * string(i))
+            if print_stuff
+                println("mismatch df/dθ" * string(i))
+            end
             no_mismatch = false
         end
     end
@@ -131,31 +168,32 @@ function test_∇(est_G::Vector{T}, G::Vector{T}; print_stuff::Bool=true, functi
 end
 
 """
-Test that the analytical and numerically estimated ∇nlogL_GLOM() are approximately the same
+    test_∇nlogL_GLOM(glo, kernel_hyperparameters; dif=1e-4, print_stuff=true)
 
-Parameters:
-
-prob_def (GLO): A structure that holds all of the relevant
-    information for constructing the model used in the GLOM et al. 2017+ paper
-kernel_hyperparameters (vector): The kernel hyperparameters for the GP model
-dif (float): How much to perturb the hyperparameters
-print_stuff (bool): if true, prints extra information about the output
-
-Returns:
-bool: Whether or not every part of the analytical and numerical gradients match
-
+Check if `∇nlogL_GLOM(glo, total_hyperparameters)` is close to numerical
+estimates provided by `est_∇nlogL_GLOM(glo, total_hyperparameters)`
 """
-function test_∇nlogL_GLOM(prob_def::GLO, kernel_hyperparameters::Vector{T}; dif::Real=1e-4, print_stuff::Bool=true) where {T<:Real}
-
-    total_hyperparameters = append!(collect(Iterators.flatten(prob_def.a0)), kernel_hyperparameters)
-    G = ∇nlogL_GLOM(prob_def, total_hyperparameters)
-    est_G = est_∇nlogL_GLOM(prob_def, total_hyperparameters; dif=dif)
-
-    return test_∇(est_G, G; print_stuff=print_stuff, function_name="∇nlogL_GLOM")
-
+function test_∇nlogL_GLOM(glo::GLO, kernel_hyperparameters::Vector{T}; dif::Real=1e-4, print_stuff::Bool=true) where {T<:Real}
+    total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), kernel_hyperparameters)
+    return test_∇(est_∇nlogL_GLOM(glo, total_hyperparameters; dif=dif),
+        ∇nlogL_GLOM(glo, total_hyperparameters);
+        print_stuff=print_stuff, function_name="∇nlogL_GLOM")
 end
 
+"""
+    est_∇∇(g::Function, inputs::Vector{<:Real}; dif=1e-7, ignore_0_inputs=false)
 
+Estimate the Hessian of a function whose gradients are provided by `g` at
+`inputs` with forward differences
+
+# Examples
+```jldoctest
+julia> g(x) = [(x[2] ^ 2) / 2, x[1] * x[2]];  # h(x) = [0 x[2], x[2] x[1]]
+
+julia> isapprox([0. 9; 9 4], GPLinearODEMaker.est_∇∇(g, [4., 9]); rtol=1e-5)
+true
+```
+"""
 function est_∇∇(g::Function, inputs::Vector{<:Real}; dif::Real=1e-7, ignore_0_inputs::Bool=false)
 
     val = g(inputs)
@@ -176,7 +214,20 @@ function est_∇∇(g::Function, inputs::Vector{<:Real}; dif::Real=1e-7, ignore_
 
 end
 
+"""
+    est_∇∇_from_f(f::Function, inputs::Vector{<:Real}; dif=1e-7, ignore_0_inputs=false)
 
+Estimate the Hessian of `f` at `inputs` with forward differences. WARNING: The
+result is very sensitive to `dif`
+
+# Examples
+```jldoctest
+julia> f(x) = (x[1] * x[2] ^ 2) / 2;  # h(x) = [0 x[2], x[2] x[1]]
+
+julia> isapprox([0. 9; 9 4], GPLinearODEMaker.est_∇∇_from_f(f, [4., 9]; dif=1e-4); rtol=1e-3)
+true
+```
+"""
 function est_∇∇_from_f(f::Function, inputs::Vector{<:Real}; dif::Real=1e-7, ignore_0_inputs::Bool=false)
 
     val = est_∇(f, inputs; dif=dif, ignore_0_inputs=ignore_0_inputs)
@@ -198,28 +249,32 @@ end
 
 
 """
-Estimate the Hessian of nlogL_GLOM() with forward differences
+    est_∇∇nlogL_GLOM(glo, total_hyperparameters; dif=1e-4)
 
-Parameters:
-
-prob_def (GLO): A structure that holds all of the relevant
-    information for constructing the model used in the GLOM et al. 2017+ paper
-total_hyperparameters (vector): The hyperparameters for the GP model, including
-    both the coefficient hyperparameters and the kernel hyperparameters
-dif (float): How much to perturb the hyperparameters
-
-Returns:
-matrix: An estimate of the hessian
-est_∇∇nlogL_GLOM
+Estimate the Hessian of `nlogL_GLOM(glo, total_hyperparameters)` with forward
+differences
 """
-function est_∇∇nlogL_GLOM(prob_def::GLO, total_hyperparameters::Vector{T}; dif::Real=1e-4) where {T<:Real}
+function est_∇∇nlogL_GLOM(glo::GLO, total_hyperparameters::Vector{T}; dif::Real=1e-4) where {T<:Real}
 
-    g(inputs) = ∇nlogL_GLOM(prob_def, inputs)
+    g(inputs) = ∇nlogL_GLOM(glo, inputs)
     return est_∇∇(g, total_hyperparameters; ignore_0_inputs=true)
 
 end
 
 
+"""
+    test_∇∇(est_H, H; print_stuff=true, function_name="function", rtol=1e-3)
+
+Check if two Hessian matrices (`est_H` and `H`) are approximately the same
+
+# Examples
+```jldoctest
+julia> GPLinearODEMaker.test_∇∇([1. 2; 3 4], [1.0001 2; 3 4]; print_stuff=false)
+true
+julia> GPLinearODEMaker.test_∇∇([1. 2; 3 4], [0. 2; 3 4]; print_stuff=false)
+false
+```
+"""
 function test_∇∇(est_H::Union{Symmetric{T,Matrix{T}},Matrix{T}}, H::Union{Symmetric{T,Matrix{T}},Matrix{T}}; print_stuff::Bool=true, function_name::String="function", rtol::Real=1e-3) where {T<:Real}
 
     if print_stuff
@@ -249,7 +304,7 @@ function test_∇∇(est_H::Union{Symmetric{T,Matrix{T}},Matrix{T}}, H::Union{Sy
         end
     end
 
-    if !no_mismatch
+    if !no_mismatch && print_stuff
         println("mismatches at 0s")
         for i in 1:size(H, 1)
             println(matches[i, :])
@@ -261,25 +316,16 @@ end
 
 
 """
-Test that the analytical and numerically estimated ∇∇nlogL_GLOM() are approximately the same
+    test_∇∇nlogL_GLOM(glo, kernel_hyperparameters; dif=1e-4, print_stuff=true)
 
-Parameters:
-
-prob_def (GLO): A structure that holds all of the relevant
-    information for constructing the model used in the GLOM et al. 2017+ paper
-kernel_hyperparameters (vector): The kernel hyperparameters for the GP model
-dif (float): How much to perturb the hyperparameters
-print_stuff (bool): if true, prints extra information about the output
-
-Returns:
-bool: Whether or not every part of the analytical and numerical Hessians match
-
+Check if `∇∇nlogL_GLOM(glo, total_hyperparameters)` is close to numerical
+estimates provided by `est_∇∇nlogL_GLOM(glo, total_hyperparameters)`
 """
-function test_∇∇nlogL_GLOM(prob_def::GLO, kernel_hyperparameters::Vector{T}; dif::Real=1e-4, print_stuff::Bool=true) where {T<:Real}
+function test_∇∇nlogL_GLOM(glo::GLO, kernel_hyperparameters::Vector{T}; dif::Real=1e-4, print_stuff::Bool=true) where {T<:Real}
 
-    total_hyperparameters = append!(collect(Iterators.flatten(prob_def.a0)), kernel_hyperparameters)
-    H = ∇∇nlogL_GLOM(prob_def, total_hyperparameters)
-    est_H = est_∇∇nlogL_GLOM(prob_def, total_hyperparameters; dif=dif)
+    total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), kernel_hyperparameters)
+    H = ∇∇nlogL_GLOM(glo, total_hyperparameters)
+    est_H = est_∇∇nlogL_GLOM(glo, total_hyperparameters; dif=dif)
 
     return test_∇∇(est_H, H; print_stuff=print_stuff, function_name="∇∇nlogL_GLOM")
 
