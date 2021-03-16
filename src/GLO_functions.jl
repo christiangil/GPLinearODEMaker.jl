@@ -78,28 +78,28 @@ struct GLO{T1<:Real, T2<:Integer}
 end
 
 
-function normalize_problem_definition!(prob_def::GLO)
-	renorms = ones(prob_def.n_out)
-	for i in 1:prob_def.n_out
-		inds = (i:prob_def.n_out:length(prob_def.y_obs))
-		prob_def.y_obs[inds] .-= mean(prob_def.y_obs[inds])
-		renorms[i] = std(prob_def.y_obs[inds])
+function normalize_GLO!(glo::GLO)
+	renorms = ones(glo.n_out)
+	for i in 1:glo.n_out
+		inds = (i:glo.n_out:length(glo.y_obs))
+		glo.y_obs[inds] .-= mean(glo.y_obs[inds])
+		renorms[i] = std(glo.y_obs[inds])
 	end
-	normalize_problem_definition!(prob_def, renorms)
+	normalize_GLO!(glo, renorms)
 end
 
-function normalize_problem_definition!(prob_def::GLO, renorms::Vector)
-	@assert length(renorms) == prob_def.n_out
-	for i in 1:prob_def.n_out
-		inds = (i:prob_def.n_out:length(prob_def.y_obs))
-		prob_def.normals[i] *= renorms[i]
-		prob_def.y_obs[inds] /= renorms[i]
-		prob_def.noise[inds] /= renorms[i]
+function normalize_GLO!(glo::GLO, renorms::Vector)
+	@assert length(renorms) == glo.n_out
+	for i in 1:glo.n_out
+		inds = (i:glo.n_out:length(glo.y_obs))
+		glo.normals[i] *= renorms[i]
+		glo.y_obs[inds] /= renorms[i]
+		glo.noise[inds] /= renorms[i]
 	end
-	if prob_def.has_covariance
+	if glo.has_covariance
 		renorm_mat = renorms .* transpose(renorms)
-		for i in 1:length(prob_def.x_obs)
-			prob_def.covariance[i, :, :] ./= renorm_mat
+		for i in 1:length(glo.x_obs)
+			glo.covariance[i, :, :] ./= renorm_mat
 		end
 	end
 end

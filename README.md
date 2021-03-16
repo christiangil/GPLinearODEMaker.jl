@@ -34,16 +34,16 @@ y2 = cos.(xs) .+ (noise2 .* randn(n))
 ys = collect(Iterators.flatten(zip(y1, y2)))
 noise = collect(Iterators.flatten(zip(noise1, noise2)))
 
-prob_def = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a0=[[1. 0.1];[0.1 1]])
-total_hyperparameters = append!(collect(Iterators.flatten(prob_def.a0)), [10])
-workspace = GLOM.nlogL_matrix_workspace(prob_def, total_hyperparameters)
+glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a0=[[1. 0.1];[0.1 1]])
+total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), [10])
+workspace = GLOM.nlogL_matrix_workspace(glo, total_hyperparameters)
 
-function f(non_zero_hyper::Vector{T} where T<:Real) = GLOM.nlogL_GLOM!(workspace, prob_def, non_zero_hyper)  # feel free to add priors here to optimize on the posterior!
+function f(non_zero_hyper::Vector{T} where T<:Real) = GLOM.nlogL_GLOM!(workspace, glo, non_zero_hyper)  # feel free to add priors here to optimize on the posterior!
 function g!(G::Vector{T}, non_zero_hyper::Vector{T}) where T<:Real
-    G[:] = GLOM.∇nlogL_GLOM!(workspace, prob_def, non_zero_hyper)  # feel free to add priors here to optimize on the posterior!
+    G[:] = GLOM.∇nlogL_GLOM!(workspace, glo, non_zero_hyper)  # feel free to add priors here to optimize on the posterior!
 end
 function h!(H::Matrix{T}, non_zero_hyper::Vector{T}) where T<:Real
-    H[:, :] = GLOM.∇∇nlogL_GLOM!(workspace, prob_def, non_zero_hyper)  # feel free to add priors here to optimize on the posterior!
+    H[:, :] = GLOM.∇∇nlogL_GLOM!(workspace, glo, non_zero_hyper)  # feel free to add priors here to optimize on the posterior!
 end
 ```
 

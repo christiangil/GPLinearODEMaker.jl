@@ -25,7 +25,7 @@ using Statistics
 import Base.ndims
 
 include("general_functions.jl")
-include("problem_definition_functions.jl")
+include("GLO_functions.jl")
 include("gp_functions.jl")
 include("prior_functions.jl")
 include("kernel_base_functions.jl")
