@@ -9,19 +9,6 @@ using SymEngine
 using IterativeSolvers
 using Statistics
 
-# using Pkg
-# Pkg.activate(".")
-# Pkg.add("LinearAlgebra")
-# Pkg.add("SpecialFunctions")
-# Pkg.add("Random")
-# Pkg.add("Distributed")
-# Pkg.add("SharedArrays")
-# Pkg.add("SymEngine")
-# Pkg.pin(PackageSpec(name="SymEngine", version="0.6.0"))
-# Pkg.add("IterativeSolvers")
-# Pkg.add("Documenter")
-# Pkg.add("Statistics")
-
 import Base.ndims
 
 include("general_functions.jl")
