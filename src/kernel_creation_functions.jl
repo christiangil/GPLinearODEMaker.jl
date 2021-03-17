@@ -1,8 +1,17 @@
 using SymEngine
 
 """
+    kernel_coder(symbolic_kernel_original, kernel_name; periodic_var="", cutoff_var="")
+
 Creates the necessary differentiated versions of base kernels required by GLOM.
-You must pass it a SymEngine Basic object with the variables already declared with the @vars command.
+
+# Arguments
+- `symbolic_kernel_original::Basic`: Kernel function created using variables declared with `SymEngine`'s `@vars` macro
+- `kernel_name::String`: The name the kernel function will be saved with
+- `periodic_var::String=""`: If changed, tries to convert the named variable (currently only one) into a periodic variable by replacing it with `2*sin(π*δ/periodic_var)`
+- `cutoff_var::String=""`: If changed, makes the kernel return 0 for `abs(δ) > cutoff_var`
+
+# Extra Info
 The created function will look like this
 
     \$kernel_name(hyperparameters::Vector{<:Real}, δ::Real; dorder::Vector{<:Integer}=zeros(Int64, length(hyperparameters) + 2))
@@ -24,7 +33,6 @@ The function is saved in src/kernels/\$kernel_name.jl, so you can use it with a 
     include("src/kernels/" * kernel_name * ".jl")
 
 """
-
 function kernel_coder(
     symbolic_kernel_original::Basic,
     kernel_name::String;
