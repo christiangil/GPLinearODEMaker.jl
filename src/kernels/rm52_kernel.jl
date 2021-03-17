@@ -1,9 +1,17 @@
 import GPLinearODEMaker.powers_of_negative_one
 
 """
-rm52_kernel function created by kernel_coder(). Requires 2 hyperparameters. Likely created using rm52_kernel_base() as an input.
+    rm52_kernel(hyperparameters, δ, dorder; shift_ind=0)
+
+Created by kernel_coder(). Requires 2 hyperparameters.
+Likely created using rm52_kernel_base() as an input.
 Use with include("src/kernels/rm52_kernel.jl").
-hyperparameters == ["α", "μ"]
+
+# Arguments
+- `hyperparameters::Vector`: The hyperparameter values. For this kernel, they should be `["α", "μ"]`
+- `δ::Real`: The difference between the inputs (e.g. `t1 - t2`)
+- `dorder::Vector{<:Integer}`: How many times to differentiate with respect to the inputs and the `hyperparameters` (e.g. `dorder=[0, 1, 0, 2]` would correspond to differentiating once w.r.t the second input and twice w.r.t `hyperparameters[2]`)
+- `shift_ind::Integer=0`: If changed, the index of which hyperparameter is the `δ` shifting one
 """
 function rm52_kernel(
     hyperparameters::Vector{<:Real},
