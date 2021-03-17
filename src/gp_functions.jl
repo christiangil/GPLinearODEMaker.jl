@@ -1,6 +1,12 @@
 """
-Creates the covariance matrix by evaluating the kernel function for each pair of passed inputs
-symmetric = a parameter stating whether the covariance is guarunteed to be symmetric about the diagonal
+    covariance!(Σ, kernel_func, x1list, x2list, kernel_hyperparameters; dorder=zeros(Int64, 2 + length(kernel_hyperparameters)), symmetric=false)
+
+Fills `Σ` with a covariance matrix by evaluating `kernel_func` with
+`kernel_hyperparameters`for each pair of `x1list` and `x2list` entries.
+
+# Keyword Arguments
+- `dorder::Vector{T2}=zeros(Int64, 2 + length(kernel_hyperparameters))`: How often to differentiate the covariance function w.r.t each `kernel_hyperparameter`. (i.e. dorder=[1, 0, 1] would correspond to differenting once w.r.t. the first and third `kernel_hyperparameter`)
+- `symmetric::Bool=false`: If you know that the resulting covariance matrix should be symmetric, setting this to `true` can reduce redundant calculations
 """
 function covariance!(
     Σ::DenseArray{T1,2},
@@ -47,6 +53,13 @@ function covariance!(
     end
 end
 
+"""
+    _covariance!(Σ::SharedArray, kernel_func, x1list, x2list, kernel_hyperparameters, dorder, symmetric, same_x, equal_spacing)
+
+Fills `Σ` in parallel with a covariance matrix by evaluating `kernel_func` with
+`kernel_hyperparameters`for each pair of `x1list` and `x2list` entries. Be
+careful using a function that starts with a `_`.
+"""
 function _covariance!(
     Σ::SharedArray{T1,2},
     kernel_func::Function,
@@ -83,6 +96,13 @@ function _covariance!(
     end
 end
 
+"""
+_covariance!(Σ::Matrix, kernel_func, x1list, x2list, kernel_hyperparameters, dorder, symmetric, same_x, equal_spacing)
+
+Fills `Σ` serially with a covariance matrix by evaluating `kernel_func` with
+`kernel_hyperparameters`for each pair of `x1list` and `x2list` entries. Be
+careful using a function that starts with a `_`.
+"""
 function _covariance!(
     Σ::Matrix{T1},
     kernel_func::Function,
@@ -117,7 +137,14 @@ function _covariance!(
     end
 end
 
+"""
+    covariance(kernel_func, x1list, x2list, kernel_hyperparameters; kwargs...)
 
+Calculates a covariance matrix by evaluating `kernel_func` with
+`kernel_hyperparameters`for each pair of `x1list` and `x2list` entries.
+
+See also: [`covariance!`](@ref)
+"""
 function covariance(
     kernel_func::Function,
     x1list::Vector{T1},
@@ -130,13 +157,20 @@ function covariance(
     else
         return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; kwargs...)
     end
-    # return covariance!(zeros(length(x1list), length(x2list)), kernel_func, x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=symmetric)
 end
 
 
 """
-Calculating the covariance between all outputs for a combination of dependent GPs
-written so that the intermediate Σ's don't have to be calculated over and over again
+    covariance(glo, x1list, x2list, total_hyperparameters; dΣdθs_total=Int64[], kwargs...)
+
+Calculates the total GLOM covariance matrix by combining the latent covariance
+matrices implied by `glo` for each pair of `x1list` and `x2list` entries.
+
+# Notable Arguments
+- `total_hyperparameters::Vector`: The current `a` values (GLOM coeffients that describe how to combine the differentiated versions of the latent GP) followed by the `kernel_hyperparameters` (i.e. lengthscales and periods)
+- `dΣdθs_total=Int64[]`: Which of the `total_hyperparameters` to differentiate the covariance function w.r.t. (i.e. for a `glo` with 6 `a` values and 2 kernel hyperparameters, dΣdθs_total=[4, 8] would correspond to differenting once w.r.t. the fourth `a` value and second kernel hyperparameter)
+
+See also: [`covariance!`](@ref)
 """
 function covariance(
     glo::GLO,
@@ -254,7 +288,14 @@ function covariance(
     # end
 
 end
+"""
+    covariance(glo, total_hyperparameters; kwargs...)
 
+Calculates the total GLOM covariance matrix by combining the latent covariance
+matrices implied by `glo` at each `glo.x_obs`
+
+See also: [`covariance`](@ref)
+"""
 covariance(
     glo::GLO,
     total_hyperparameters::Vector{<:Real};
@@ -262,7 +303,12 @@ covariance(
     ) = covariance(glo, glo.x_obs, glo.x_obs, total_hyperparameters; kwargs...)
 
 
-"adding measurement noise to Σ_obs"
+"""
+    Σ_observations(Σ, measurement_noise::Vector; return_both=false, kwargs...)
+
+Add `measurement_noise`^2 to the diagonal of `Σ` and performs a Cholesky
+factorization. Optionally returns the `Σ` back as well.
+"""
 function Σ_observations(
     Σ::Symmetric{T, Matrix{T}},
     measurement_noise::Vector{T};
@@ -273,7 +319,12 @@ function Σ_observations(
     return return_both ? (Σ_obs, Σ) : Σ_obs
 end
 
-"adding measurement noise to Σ_obs"
+"""
+    Σ_observations(Σ, measurement_covariance::Array{T, 3}; return_both=false, kwargs...)
+
+Add `measurement_covariance` to the block diagonal of `Σ` and performs a
+Cholesky factorization. Optionally returns the `Σ` back as well.
+"""
 function Σ_observations(
     Σ::Symmetric{T, Matrix{T}},
     measurement_covariance::Array{T, 3};
@@ -296,20 +347,35 @@ function Σ_observations(
     return return_both ? (Σ_obs, Σ) : Σ_obs
 end
 
-"adding measurement noise to Σ_obs"
-function Σ_observations(
+"""
+    Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; ignore_asymmetry=false, return_both)
+
+Calculates the covariance matrix of `kernel_func` at `x_obs` and adds
+`measurement_noise`^2 to the diagonal and performs a Cholesky factorization.
+Optionally returns the `Σ` back as well.
+"""
+Σ_observations(
     kernel_func::Function,
     x_obs::Vector{T},
     measurement_noise::Vector{T},
     kernel_hyperparameters::Vector{T};
     ignore_asymmetry::Bool=false,
     return_both::Bool=false
-    ) where {T<:Real}
+    ) where {T<:Real} =
+    Σ_observations(
+        symmetric_A(
+            covariance(kernel_func, x_obs, x_obs, kernel_hyperparameters);
+            ignore_asymmetry=ignore_asymmetry),
+        measurement_noise;
+        return_both=return_both)
 
-    return Σ_observations(symmetric_A(covariance(kernel_func, x_obs, x_obs, kernel_hyperparameters); ignore_asymmetry=ignore_asymmetry), measurement_noise; return_both=return_both)
-end
+"""
+    Σ_observations(glo, total_hyperparameters; ignore_asymmetry=false, return_both=false)
 
-"adding measurement noise to Σ_obs"
+Calculates a Cholesky decomposition of the GLOM covariance matrix implied by
+`glo` and `total_hyperparameters` including `glo.noise` or `glo.covariance` on
+the (block) diagonal
+"""
 function Σ_observations(
     glo::GLO,
     total_hyperparameters::Vector{T};
@@ -323,7 +389,12 @@ function Σ_observations(
 end
 
 
-"calculating the standard deviation at each GP posterior point. Algorithm from RW alg. 2.1"
+"""
+    get_σ(L_obs, Σ_obs_samp, diag_Σ_samp)
+
+Calculate the GP posterior standard deviation at each sampled point. Algorithm
+2.1 from Rasmussen and Williams
+"""
 function get_σ(
     L_obs::LowerTriangular{T,Matrix{T}},
     Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
@@ -338,18 +409,29 @@ function get_σ(
     # return sqrt.(diag_Σ_samp - diag(Σ_samp_obs * (Σ_obs \ Σ_obs_samp)))  # much slower
 end
 
+"""
+    get_σ(glo, x_samp, total_hyperparameters)
+
+Calculate the `glo` GP (using `total_hyperparameters`) posterior standard
+deviation at each `x_samp` point.
+"""
 function get_σ(
     glo::GLO,
     x_samp::Vector{T},
     total_hyperparameters::Vector{T}
     ) where {T<:Real}
 
-    (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp) = covariance_permutations(glo, x_samp, total_hyperparameters)
+    (Σ_samp, Σ_obs, _, Σ_obs_samp) = covariance_permutations(glo, x_samp, total_hyperparameters)
     return get_σ(ridge_chol(Σ_obs).L, Σ_obs_samp, diag(Σ_samp))
 end
 
+"""
+    covariance_permutations(kernel_func, x_obs, x_samp, measurement_noise, kernel_hyperparameters; return_both=false)
 
-"calcuate all of the different versions of the covariance matrices for measured and sampled points"
+Calculate all of the different versions of the covariance matrices using
+`kernel_func` with `kernel_hyperparameters` between each of the pairs of `x_obs`
+and `x_samp` and themselves.
+"""
 function covariance_permutations(
     kernel_func::Function,
     x_obs::Vector{T},
@@ -371,7 +453,13 @@ function covariance_permutations(
     end
 end
 
-"calcuate all of the different versions of the covariance matrices for measured and sampled points"
+"""
+    covariance_permutations(glo, x_samp, total_hyperparameters; return_both=false)
+
+Calculate all of the different versions of the covariance matrices using
+the `glo` GP with `total_hyperparameters` between each of the pairs of
+`glo.x_obs` and `x_samp` and themselves.
+"""
 function covariance_permutations(
     glo::GLO,
     x_samp::Vector{T},
@@ -392,7 +480,13 @@ function covariance_permutations(
 end
 
 
-"Condition the GP on data"
+"""
+    GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw; return_Σ=true, kwargs...)
+
+Calculate the sampled posterior mean and std, observed posterior mean, and
+(optionally) the posterior covariance matrix for the GP used to calculate
+`Σ_samp`, `Σ_obs`, `Σ_samp_obs`, `Σ_obs_samp`, and `Σ_obs_raw`
+"""
 function GP_posteriors_from_covariances(
     y_obs::Vector{T},
     Σ_samp::Union{Cholesky{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
@@ -428,7 +522,13 @@ function GP_posteriors_from_covariances(
 end
 
 
-"Condition the GP on data"
+"""
+    GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp; return_Σ=true, kwargs...)
+
+Calculate the sampled posterior mean and std and (optionally) the posterior
+covariance matrix for the GP used to calculate `Σ_samp`, `Σ_obs`, `Σ_samp_obs`,
+and `Σ_obs_samp`
+"""
 function GP_posteriors_from_covariances(
     y_obs::Vector{T},
     Σ_samp::Union{Cholesky{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
@@ -461,26 +561,39 @@ function GP_posteriors_from_covariances(
 
 end
 
+"""
+    GP_posteriors(kernel_func, x_obs, y_obs, x_samp, measurement_noise, kernel_hyperparameters; return_mean_obs=false, kwargs...)
 
+Calculate the posterior mean and std at `x_samp`, (optionally) posterior mean
+at `x_obs` and (optionally) the posterior covariance matrix for the GP described
+by `kernel_func` and `kernel_hyperparameters`
+"""
 function GP_posteriors(
     kernel_func::Function,
     x_obs::Vector{T},
     y_obs::Vector{T},
     x_samp::Vector{T},
     measurement_noise::Vector{T},
-    total_hyperparameters::Vector{T};
+    kernel_hyperparameters::Vector{T};
     return_mean_obs::Bool=false,
     kwargs...) where {T<:Real}
 
     if return_mean_obs
-        (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw) = covariance_permutations(kernel_func, x_obs, x_samp, measurement_noise, total_hyperparameters; return_both=return_mean_obs)
+        (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw) = covariance_permutations(kernel_func, x_obs, x_samp, measurement_noise, kernel_hyperparameters; return_both=return_mean_obs)
         return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw; kwargs...)
     else
-        (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp) = covariance_permutations(kernel_func, x_obs, x_samp, measurement_noise, total_hyperparameters; return_both=return_mean_obs)
+        (Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp) = covariance_permutations(kernel_func, x_obs, x_samp, measurement_noise, kernel_hyperparameters; return_both=return_mean_obs)
         return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp; kwargs...)
     end
 end
 
+"""
+    GP_posteriors(glo, x_samp, total_hyperparameters; return_mean_obs=false, y_obs=glo.y_obs, kwargs...)
+
+Calculate the posterior mean and std at `x_samp`, (optionally) posterior mean
+at `glo.x_obs` and (optionally) the posterior covariance matrix for the GP described
+by `glo` and `total_hyperparameters`
+"""
 function GP_posteriors(
     glo::GLO,
     x_samp::Vector{T},
@@ -501,26 +614,14 @@ end
 
 
 """
+    coefficient_orders(n_out, n_dif; a=ones(n_out, n_dif))
+
 Find the powers that each GLOM coefficient is taken to for each part of the
 matrix construction before differentiating by any hyperparameters.
 
-Parameters:
-
-n_out (int): Amount of dimensions being fit
-n_dif (int): Amount of GP time derivatives are in the GLOM model being used
-a (matrix): The coefficients for the GLOM model
-
-Returns:
-6D matrix: Filled with integers for what power each coefficient is taken to in
-    the construction of a given block of the total covariance matrix.
-    For example, coeff_orders[1,1,2,3,:,:] would tell you the powers of each
-    coefficient (:,:) that are multiplied by the covariance matrix constructed
-    by evaluating the partial derivative of the kernel (once by t1 and twice by
-    t2) at every pair of time points (2,3) in the construction of the first
-    block of the total covariance matrix (1,1)
-4D matrix: Filled with ones anywhere that coeff_orders indicates that
-    coefficients exists to multiply a given covariance matrix for a given block
-
+# Outputs
+- `coeff_orders::Array{Int, 6}`: filled with integers for what power each coefficient is taken to in the construction of a given block of the total covariance matrix. For example, coeff_orders[1,1,2,3,:,:] would tell you the powers of each coefficient (:,:) that are multiplied by the covariance matrix constructed by evaluating the partial derivative of the kernel (once by t1 and twice by t2) at every pair of time points (2,3) in the construction of the first block of the total covariance matrix (1,1)
+- `coeff_coeffs::Array{Int, 4}`: Filled with ones anywhere that coeff_orders indicates that coefficients exists to multiply a given covariance matrix for a given block
 """
 function coefficient_orders(
     n_out::Integer,
@@ -563,26 +664,13 @@ function coefficient_orders(
 
 end
 
-
 """
-Getting the coefficients for constructing differentiated versions of the kernel
-using the powers that each coefficient is taken to for each part of the matrix
-construction
+    dif_coefficients!(n_out, n_dif, dΣdθ_total::Int, coeff_orders, coeff_coeffs)
 
-Parameters:
-
-n_out (int): Amount of dimensions being fit
-n_dif (int): Amount of GP time derivatives are in the GLOM model being used
-dΣdθ_total (matrix): The coefficients for the GLOM model
-coeff_orders (6D matrix): Filled with integers for what power each coefficient
-    is taken to in the construction of a given block of the total covariance
-    matrix. See coefficient_orders()
-coeff_coeffs (4D matrix): Filled with ones and zeros based on which time
-    differentiated covariance matrices are added to which blocks
-
-Returns:
-Only modifies the passed coeff_orders and coeff_coeffs matrices
-
+Modify `coeff_orders` and `coeff_coeffs` with the coefficients for constructing
+differentiated version of the kernel (for the differentiation implied by
+`dΣdθ_total`) using the powers that each coefficient is taken to for each part
+of the matrix construction
 """
 function dif_coefficients!(
     n_out::Integer,
@@ -616,6 +704,15 @@ function dif_coefficients!(
     end
 end
 
+
+"""
+    dif_coefficients!(n_out, n_dif, dΣdθs_total::Vector, coeff_orders, coeff_coeffs)
+
+Modify `coeff_orders` and `coeff_coeffs` with the coefficients for constructing
+differentiated version of the kernel (for the differentiations implied by
+`dΣdθ_totals`) using the powers that each coefficient is taken to for each part
+of the matrix construction
+"""
 function dif_coefficients!(
     n_out::Integer,
     n_dif::Integer,
@@ -632,15 +729,10 @@ end
 
 # TODO: rename nlogL_normalization
 """
-Multivariate normal negative log  likelihood
+    nlogL(Σ, y; α= Σ \\ y, nlogL_normalization=logdet(Σ)+length(y)*log(2*π))
 
-Parameters:
-Σ (Cholesky factorized object): The covariance matrix
-y (vector): The values
-α (vector): inv(Σ_obs) * y_obs
-
-Returns:
-float: the negative log marginal likelihood
+Negative log likelihood for data `y` assuming it was drawn from a multivariate
+normal distribution with 0 mean and covariance `Σ` (usually `Σ + noise`)
 """
 function nlogL(
     Σ::Cholesky{T,Matrix{T}},
@@ -663,21 +755,16 @@ function nlogL(
 
 end
 
+
 """
-First partial derivative of the GP negative log marginal likelihood w.r.t. GP
-hyperparameters
-(see eq. 5.9 in Rasmussen and Williams 2006)
+    dnlogLdθ(y, α, β)
 
-Parameters:
-y (vector): The observations at each time point
-α (vector): inv(Σ_obs) * y
-β (matrix): inv(Σ_obs) * dΣ_dθ where dΣ_dθ is the partial derivative of the
-    covariance matrix Σ_obs w.r.t. a hyperparameter
+First partial derivative of `nlogL(Σ, y)` w.r.t. hyperparameters that affect `Σ`
 
-Returns:
-float: the partial derivative of the negative log marginal likelihood w.r.t. the
-    hyperparameter used in the calculation of β
-
+# Arguments
+- `y::Vector`: The observations at each time point
+- `α::Vector`: `inv(Σ) * y`
+- `β::Matrix`: `inv(Σ) * dΣ_dθ` where `dΣ_dθ` is the partial derivative of the `Σ` w.r.t. a hyperparameter
 """
 function dnlogLdθ(
     y::Vector{T},
@@ -697,17 +784,13 @@ end
 
 
 """
-First partial derivative of the GP negative log marginal likelihood w.r.t.
-parameters that affect y
+    dnlogLdθ(y1, α)
 
-Parameters:
-y1 (vector): The derivative of observations at each time point
-α (vector): inv(Σ_obs) * y
+First partial derivative of `nlogL(Σ, y)` w.r.t. hyperparameters that affect `y`
 
-Returns:
-float: the partial derivative of the negative log marginal likelihood w.r.t. the
-    parameter used in the calculation of y1
-
+# Arguments
+- `y1::Vector`: The derivative of observations at each time point
+- `α::Vector`: `inv(Σ) * y`
 """
 function dnlogLdθ(
     y1::Vector{T},
@@ -720,31 +803,30 @@ function dnlogLdθ(
 end
 
 
-"Returns gradient of nlogL in GP hyperparameters"
+"""
+    ∇nlogL(y, α, βs)
+
+Gradient of `nlogL(Σ, y)` w.r.t. hyperparameters that affect `Σ`
+
+# Arguments
+- `y::Vector`: The observations at each time point
+- `α::Vector`: inv(Σ) * y
+- `βs::Vector{Matrix}`: List of `inv(Σ) * dΣ_dθ` where `dΣ_dθ` is the partial derivative of `Σ` w.r.t. each hyperparameter
+"""
 ∇nlogL(y::Vector{T}, α::Vector{T}, βs::Vector{Matrix{T}}) where {T<:Real} = [dnlogLdθ(y, α, β) for β in βs]
 
-
 """
-Second partial derivative of the GP negative log marginal likelihood w.r.t. two
-GP hyperparameters.
-Calculated with help from rules found on page 7 of the matrix cookbook
-(https://www.ics.uci.edu/~welling/teaching/KernelsICS273B/MatrixCookBook.pdf)
+    d2nlogLdθ(y, α, β1, β2, β12)
 
-Parameters:
-y (vector): The observations at each time point
-α (vector): inv(Σ_obs) * y
-β1 (matrix): inv(Σ_obs) * dΣ_dθ1 where dΣ_dθ1 is the partial derivative of the
-    covariance matrix Σ_obs w.r.t. a hyperparameter
-β2 (matrix): inv(Σ_obs) * dΣ_dθ2 where dΣ_dθ2 is the partial derivative of the
-    covariance matrix Σ_obs w.r.t. another hyperparameter
-β12 (matrix): inv(Σ_obs) * d2Σ_dθ1dθ2 where d2Σ_dθ1dθ2 is the partial
-    derivative of the covariance matrix Σ_obs w.r.t. both of the hyperparameters
-    being considered
+Second partial derivative of `nlogL(Σ, y)` w.r.t. two hyperparameters that
+affect `Σ`
 
-Returns:
-float: the partial derivative of the negative log marginal likelihood w.r.t. the
-    hyperparameters used in the calculation of the inputs
-
+# Arguments
+- `y::Vector`: The observations at each time point
+- `α::Vector`: `inv(Σ) * y`
+- `β1::Matrix`: `inv(Σ) * dΣ_dθ` where `dΣ_dθ` is the partial derivative of the `Σ` w.r.t. the first hyperparameter
+- `β2::Matrix`: Same as `β1` but for the second hyperparameter
+- `β12::Matrix`: `inv(Σ_obs) * d2Σ_dθ1dθ2` where `d2Σ_dθ1dθ2` is the partial derivative of the covariance matrix Σ_obs w.r.t. both of the hyperparameters being considered
 """
 function d2nlogLdθ(
     y::Vector{T},
@@ -765,25 +847,16 @@ function d2nlogLdθ(
 
 end
 
-
 """
-Second partial derivative of the GP negative log marginal likelihood w.r.t. two
-parameters that affect y.
-Calculated with help from rules found on page 7 of the matrix cookbook
-(https://www.ics.uci.edu/~welling/teaching/KernelsICS273B/MatrixCookBook.pdf)
+    d2nlogLdθ(y2, y12, α, α1)
 
-Parameters:
-y2 (vector): The derivative of observations at each time point w.r.t. the second
-    relevant parameter
-y12 (vector): The derivative of observations at each time point w.r.t. the both
-    relevant parameters
-α (vector): inv(Σ_obs) * y
-α1 (vector): inv(Σ_obs) * y1
+Second partial derivative of `nlogL(Σ, y)` w.r.t. two parameters that affect `y`
 
-Returns:
-float: the partial derivative of the negative log marginal likelihood w.r.t. the
-    hyperparameters used in the calculation of the inputs
-
+# Arguments
+- `y2::Vector`: The derivative of observations w.r.t the second parameter at each time point
+- `y12::Vector`: The derivative of observations w.r.t the both parameters at each time point
+- `α::Vector`: `inv(Σ) * y`
+- `α1::Vector`: `inv(Σ) * y1` where `y1` is the derivative of observations w.r.t the first parameter at each time point
 """
 function d2nlogLdθ(
     y2::Vector{T},
@@ -797,26 +870,17 @@ function d2nlogLdθ(
 
 end
 
-
 """
-Second partial derivative of the GP negative log marginal likelihood w.r.t. a
-GP hyperparameter and a parameter thats affect y.
-Calculated with help from rules found on page 7 of the matrix cookbook
-(https://www.ics.uci.edu/~welling/teaching/KernelsICS273B/MatrixCookBook.pdf)
+    d2nlogLdθ(y, y1, α, α1, β2)
 
-Parameters:
-y (vector): The observations at each time point
-y1 (vector): The derivative of observations at each time point w.r.t the
-    parameter that affects y
-α (vector): inv(Σ_obs) * y
-α1 (vector): inv(Σ_obs) * y1
-β2 (matrix): inv(Σ_obs) * dΣ_dθ2 where dΣ_dθ2 is the partial derivative of the
-    covariance matrix Σ_obs w.r.t. the desired GP hyperparameter
+Second partial derivative of `nlogL(Σ, y)` w.r.t. a parameter that affects `y` and a hyperparameter that affects `Σ`
 
-Returns:
-float: the partial derivative of the negative log marginal likelihood w.r.t. the
-    hyperparameters used in the calculation of the inputs
-
+# Arguments
+- `y::Vector`: The observations at each time point
+- `y1::Vector`: The derivative of observations w.r.t the `y`-affecting parameter at each time point
+- `α::Vector`: `inv(Σ) * y`
+- `α1::Vector`: `inv(Σ) * y1` where `y1` is the derivative of observations w.r.t the first parameter at each time point
+- `β2::Matrix`: `inv(Σ) * dΣ_dθ` where `dΣ_dθ` is the partial derivative of the `Σ` w.r.t. the `Σ`-affecting hyperparameter
 """
 function d2nlogLdθ(
     y::Vector{T},
@@ -831,13 +895,18 @@ function d2nlogLdθ(
 end
 
 
-# struct nlogL_matrix_workspace
-#     nlogL_hyperparameters::Vector{<:Real}
-#     Σ_obs::Cholesky{T,Matrix{T}} where T<:Real
-#     y_obs::Vector{<:Real}
-#     α::Vector{<:Real}
-#     ∇nlogL_hyperparameters::Vector{<:Real}
-#     βs::Vector{Matrix{<:Real}}
+"""
+	nlogL_matrix_workspace{T<:Real}
+
+A structure that holds all of the relevant information for calculating nlogL()
+derivatives. Used to prevent recalculations during optimization.
+
+# Arguments
+- `nlogL_hyperparameters::Vector`: The current hyperparameters
+- `Σ_obs::Cholesky`: The covariance matrix based on `nlogL_hyperparameters`
+- `∇nlogL_hyperparameters::Vector`: The `nlogl` gradient at `nlogL_hyperparameters`
+- `βs::Vector{Matrix}`: List of `inv(Σ) * dΣ_dθ` where `dΣ_dθ` is the partial derivative of `Σ` w.r.t. each `nlogL_hyperparameters`
+"""
 struct nlogL_matrix_workspace{T<:Real}
     nlogL_hyperparameters::Vector{T}
     Σ_obs::Cholesky{T,Matrix{T}}
@@ -864,39 +933,11 @@ struct nlogL_matrix_workspace{T<:Real}
 end
 
 
-# "Ensure that the passed matrix workspace parameters are what we expect them to be"
-# function check_matrix_workspace(
-#     nlogL_hyperparameters::Vector{T}
-#     Σ_obs::Cholesky{T,Matrix{T}}
-#     y_obs::Vector{T}
-#     α::Vector{T}
-#     ∇nlogL_hyperparameters::Vector{T}
-#     βs::Vector{Matrix{T}}
-#     ) where {T<:Real}
-#
-#     @assert length(y_obs) == length(α) == size(Σ_obs, 1) == size(Σ_obs, 2) = size(βs[1], 1) == size(βs[1], 2)
-#     @assert length(nlogL_hyperparameters) == length(∇nlogL_hyperparameters)
-#     @assert length(findall(!iszero, nlogL_hyperparameters)) == length(findall(!iszero, ∇nlogL_hyperparameters)) == size(βs, 1)
-# end
+"""
+    calculate_shared_nlogL_matrices(glo, non_zero_hyperparameters; Σ_obs=Σ_observations(glo, reconstruct_total_hyperparameters(glo, non_zero_hyperparameters); ignore_asymmetry=true))
 
-
-# function init_nlogL_matrix_workspace(
-#     glo::GLO,
-#     total_hyperparameters::Vector{<:Real})
-#
-#     total_hyper = reconstruct_total_hyperparameters(glo, total_hyperparameters)
-#     Σ_obs = Σ_observations(glo, total_hyper; ignore_asymmetry=true)
-#     return nlogL_matrix_workspace(
-#         total_hyper,
-#         Σ_obs,
-#         copy(glo.y_obs),
-#         Σ_obs \ glo.y_obs,
-#         copy(total_hyper),
-#         [Σ_obs \ covariance(glo, total_hyper; dΣdθs_total=[i]) for i in findall(!iszero, total_hyper)])
-# end
-
-
-"Calculates the quantities shared by the nlogL and ∇nlogL calculations"
+Calculates the quantities shared by the nlogL and ∇nlogL calculations
+"""
 function calculate_shared_nlogL_matrices(
     glo::GLO,
     non_zero_hyperparameters::Vector{<:Real};
@@ -910,6 +951,12 @@ function calculate_shared_nlogL_matrices(
 end
 
 
+"""
+    calculate_shared_nlogL_matrices!(workspace, glo, non_zero_hyperparameters)
+
+Calculates the quantities shared by the nlogL and ∇nlogL calculations and stores
+them in the existing `workspace`
+"""
 function calculate_shared_nlogL_matrices!(
     workspace::nlogL_matrix_workspace,
     glo::GLO,
@@ -926,7 +973,11 @@ function calculate_shared_nlogL_matrices!(
 end
 
 
-"Calculates the quantities shared by the ∇nlogL and ∇∇nlogL calculations"
+"""
+    calculate_shared_∇nlogL_matrices(glo, non_zero_hyperparameters; kwargs...)
+
+Calculates the quantities shared by the ∇nlogL and ∇∇nlogL calculations
+"""
 function calculate_shared_∇nlogL_matrices(
     glo::GLO,
     non_zero_hyperparameters::Vector{<:Real};
@@ -941,6 +992,12 @@ function calculate_shared_∇nlogL_matrices(
 end
 
 
+"""
+    calculate_shared_∇nlogL_matrices!(workspace, glo, non_zero_hyperparameters)
+
+Calculates the quantities shared by the ∇nlogL and ∇∇nlogL calculations and
+stores them in the existing `workspace`
+"""
 function calculate_shared_∇nlogL_matrices!(
     workspace::nlogL_matrix_workspace,
     glo::GLO,
@@ -957,7 +1014,9 @@ end
 
 
 """
-Tries to include the specified kernel, assuming it was included with GLOM
+    include_kernel(kernel_name)
+
+Tries to include the specified kernel, assuming it was included with GLOM.
 Returns the kernel function and number of hyperparameters it uses
 """
 function include_kernel(kernel_name::AbstractString)
@@ -969,8 +1028,11 @@ end
 
 
 """
-Make it easy to run the covariance calculations on many processors
-Makes sure every worker has access to kernel function
+    prep_parallel_covariance(kernel_name, kernel_path; kwargs...)
+
+Make it easy to run the covariance calculations on many processors. Makes sure
+every worker has access to kernel function, importing it from the
+`kernel_path`.
 """
 function prep_parallel_covariance(
     kernel_name::AbstractString,
@@ -984,8 +1046,10 @@ end
 
 
 """
-Make it easy to run the covariance calculations on many processors
-Makes sure every worker has access to kernel function
+    prep_parallel_covariance(kernel_name; kwargs...)
+
+Make it easy to run the covariance calculations on many processors. Makes sure
+every worker has access to kernel function.
 """
 function prep_parallel_covariance(
     kernel_name::AbstractString;
@@ -997,8 +1061,12 @@ function prep_parallel_covariance(
 end
 
 
+"""
+    nlogL_GLOM(glo, total_hyperparameters; y_obs=copy(glo.y_obs), kwargs...)
 
-"nlogL for GLOM GP"
+Negative log likelihood for `glo` using the non-zero `total_hyperparameters` to
+construct the covariance matrix.
+"""
 function nlogL_GLOM(
     glo::GLO,
     total_hyperparameters::Vector{T};
@@ -1012,7 +1080,12 @@ function nlogL_GLOM(
 end
 
 
-"nlogL for GLOM GP"
+"""
+    nlogL_GLOM!(workspace, glo, total_hyperparameters; y_obs=copy(glo.y_obs))
+
+Negative log likelihood for `glo` using `total_hyperparameters` to construct the
+covariance matrix and storing the intermediate results in `workspace`.
+"""
 function nlogL_GLOM!(
     workspace::nlogL_matrix_workspace,
     glo::GLO,
@@ -1025,7 +1098,12 @@ function nlogL_GLOM!(
 end
 
 
-"Returns gradient of nlogL for non-zero hyperparameters"
+"""
+    ∇nlogL_GLOM(glo, total_hyperparameters; y_obs=copy(glo.y_obs), kwargs...)
+
+`nlogL` gradient for `glo` using the non-zero `total_hyperparameters` to
+construct the covariance matrices.
+"""
 function ∇nlogL_GLOM(
     glo::GLO,
     total_hyperparameters::Vector{T};
@@ -1040,7 +1118,12 @@ function ∇nlogL_GLOM(
 end
 
 
-"Returns gradient of nlogL for non-zero hyperparameters"
+"""
+    ∇nlogL_GLOM!(workspace, glo, total_hyperparameters; y_obs=copy(glo.y_obs))
+
+`nlogL` gradient for `glo` using the non-zero `total_hyperparameters` to
+construct the covariance matrices and storing the intermediate results in `workspace`.
+"""
 function ∇nlogL_GLOM!(
     workspace::nlogL_matrix_workspace,
     glo::GLO,
@@ -1055,7 +1138,12 @@ function ∇nlogL_GLOM!(
 end
 
 
-"Replaces H with Hessian of nlogL for non-zero hyperparameters"
+"""
+    ∇∇nlogL_GLOM(glo, total_hyperparameters, Σ_obs, y_obs, α, βs)
+
+`nlogL` Hessian for `glo` using the non-zero `total_hyperparameters` to
+construct the covariance matrices.
+"""
 function ∇∇nlogL_GLOM(
     glo::GLO,
     total_hyperparameters::Vector{T},
@@ -1067,7 +1155,6 @@ function ∇∇nlogL_GLOM(
 
     non_zero_inds = copy(glo.non_zero_hyper_inds)
     H = zeros(length(non_zero_inds), length(non_zero_inds))
-
     for (i, nzind1) in enumerate(non_zero_inds)
         for (j, nzind2) in enumerate(non_zero_inds)
             if i <= j
@@ -1075,13 +1162,18 @@ function ∇∇nlogL_GLOM(
             end
         end
     end
-
     H = Symmetric(H)
+    return H
 
 end
 
 
-"Replaces H with Hessian of nlogL for non-zero hyperparameters"
+"""
+    ∇∇nlogL_GLOM(glo, total_hyperparameters; y_obs=copy(glo.y_obs))
+
+`nlogL` Hessian for `glo` using the non-zero `total_hyperparameters` to
+construct the covariance matrices.
+"""
 function ∇∇nlogL_GLOM(
     glo::GLO,
     total_hyperparameters::Vector{T};
@@ -1096,7 +1188,13 @@ function ∇∇nlogL_GLOM(
 end
 
 
-"Returns gradient of nlogL for non-zero hyperparameters"
+"""
+    ∇∇nlogL_GLOM!(workspace, glo, total_hyperparameters; y_obs=copy(glo.y_obs))
+
+`nlogL` Hessian for `glo` using the non-zero `total_hyperparameters` to
+construct the covariance matrices and storing the intermediate results in
+`workspace`.
+"""
 function ∇∇nlogL_GLOM!(
     workspace::nlogL_matrix_workspace,
     glo::GLO,
@@ -1111,7 +1209,11 @@ function ∇∇nlogL_GLOM!(
 end
 
 
-"reinsert the zero coefficients into the non-zero hyperparameter list if needed"
+"""
+    reconstruct_total_hyperparameters(glo, hyperparameters)
+
+Reinsert the zero coefficients into the non-zero hyperparameter list if needed
+"""
 function reconstruct_total_hyperparameters(
     glo::GLO,
     hyperparameters::Vector{T}
