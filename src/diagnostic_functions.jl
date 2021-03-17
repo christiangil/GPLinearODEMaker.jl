@@ -20,7 +20,7 @@ dΣdθs, analytical dΣdθs, and differences between them
 """
 function est_dΣdθ(glo::GLO, kernel_hyperparameters::Vector{T}; return_est::Bool=true, return_anal::Bool=false, return_dif::Bool=false, return_bool::Bool=false, dif::Real=1e-6, print_stuff::Bool=true) where {T<:Real}
 
-    total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), kernel_hyperparameters)
+    total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), kernel_hyperparameters)
 
     if print_stuff
         println()
@@ -30,7 +30,7 @@ function est_dΣdθ(glo::GLO, kernel_hyperparameters::Vector{T}; return_est::Boo
 
     x = glo.x_obs
     return_vec = []
-    coeff_orders = coefficient_orders(glo.n_out, glo.n_dif, a=glo.a0)
+    coeff_orders = coefficient_orders(glo.n_out, glo.n_dif, a=glo.a)
 
     # construct estimated dΣdθs
     if return_est || return_dif || return_bool
@@ -174,7 +174,7 @@ Check if `∇nlogL_GLOM(glo, total_hyperparameters)` is close to numerical
 estimates provided by `est_∇nlogL_GLOM(glo, total_hyperparameters)`
 """
 function test_∇nlogL_GLOM(glo::GLO, kernel_hyperparameters::Vector{T}; dif::Real=1e-4, print_stuff::Bool=true) where {T<:Real}
-    total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), kernel_hyperparameters)
+    total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), kernel_hyperparameters)
     return test_∇(est_∇nlogL_GLOM(glo, total_hyperparameters; dif=dif),
         ∇nlogL_GLOM(glo, total_hyperparameters);
         print_stuff=print_stuff, function_name="∇nlogL_GLOM")
@@ -323,7 +323,7 @@ estimates provided by `est_∇∇nlogL_GLOM(glo, total_hyperparameters)`
 """
 function test_∇∇nlogL_GLOM(glo::GLO, kernel_hyperparameters::Vector{T}; dif::Real=1e-4, print_stuff::Bool=true) where {T<:Real}
 
-    total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), kernel_hyperparameters)
+    total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), kernel_hyperparameters)
     H = ∇∇nlogL_GLOM(glo, total_hyperparameters)
     est_H = est_∇∇nlogL_GLOM(glo, total_hyperparameters; dif=dif)
 

@@ -147,7 +147,7 @@ function covariance(
     kwargs...)
 
     @assert all(dΣdθs_total .>= 0)
-    @assert length(total_hyperparameters) == glo.n_kern_hyper + length(glo.a0)
+    @assert length(total_hyperparameters) == glo.n_kern_hyper + length(glo.a)
 
     num_coefficients = length(total_hyperparameters) - glo.n_kern_hyper
     n_out = glo.n_out
@@ -1117,15 +1117,15 @@ function reconstruct_total_hyperparameters(
     hyperparameters::Vector{T}
     ) where {T<:Real}
 
-    if length(hyperparameters)!=(glo.n_kern_hyper + length(glo.a0))
-        new_coeff_array = reconstruct_array(hyperparameters[1:end - glo.n_kern_hyper], glo.a0)
+    if length(hyperparameters)!=(glo.n_kern_hyper + length(glo.a))
+        new_coeff_array = reconstruct_array(hyperparameters[1:end - glo.n_kern_hyper], glo.a)
         coefficient_hyperparameters = collect(Iterators.flatten(new_coeff_array))
         total_hyperparameters = append!(coefficient_hyperparameters, hyperparameters[end - glo.n_kern_hyper + 1:end])
     else
         total_hyperparameters = copy(hyperparameters)
     end
 
-    @assert length(total_hyperparameters)==(glo.n_kern_hyper + length(glo.a0))
+    @assert length(total_hyperparameters)==(glo.n_kern_hyper + length(glo.a))
 
     return total_hyperparameters
 

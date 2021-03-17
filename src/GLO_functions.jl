@@ -1,23 +1,40 @@
 """
-A structure that holds all of the relevant information for constructing the model
+	GLO{T1<:Real, T2<:Integer} a.k.a. GPLinearODE
+
+A structure that holds all of the relevant information for constructing the
+GLOM model
+
+# Arguments
+- `kernel::Function`: kernel function for the latent Gaussian process (GP)
+- `n_kern_hyper::T2`: amount of hyperparameters for the kernel function
+- `n_dif::T2`: amount of times you are differenting the base kernel
+- `n_out::T2`: amount of outputs you are jointly modelling
+- `x_obs::Vector{T1}`: the observation times/phases
+- `y_obs::Vector{T1}`: the flattened, observed data
+- `noise::Vector{T1}`: the measurement noise at all observations (σ, not σ^2)
+- `normals::Vector{T1}`: the normalization of each section of y_obs
+- `a::Matrix{T1}`: the meta kernel coefficients
+- `non_zero_hyper_inds::Vector{T2}`: the indices of the non-zero hyperparameters
+- `coeff_orders::AbstractArray{T2,6}`: The powers that each `a` coefficient is taken to for each part of the covariance matrix construction. Used for constructing differentiated versions of the kernel
+- `coeff_coeffs::AbstractArray{T2,4}`: The coefficients that each `a` coefficient is multiplied by for each part of the covariance matrix construction. Used for constructing differentiated versions of the kernel
+- `covariance::Array{T1, 3}`: the measurement covariance at all observations
+- `has_covariance::Bool`: Whether or not there are measurement covariances (as opposed to just having measurement noises)
+- `kernel_changes_with_output::Bool`: A flag for if the kernel is not the same for each output (e.g. there is a time delay kernel hyperparameter that changes)
 """
 struct GLO{T1<:Real, T2<:Integer}
-	kernel::Function  # kernel function
-	n_kern_hyper::T2  # amount of hyperparameters for the kernel function
-	n_dif::T2  # amount of times you are differenting the base kernel
-	n_out::T2  # amount of scores you are jointly modelling
-	x_obs::Vector{T1} # the observation times/phases
-	y_obs::Vector{T1}  # the flattened, observed data
-	noise::Vector{T1}  # the measurement noise at all observations
-	normals::Vector{T1}  # the normalization of each section of y_obs
-	a0::Matrix{T1}  # the meta kernel coefficients
-	non_zero_hyper_inds::Vector{T2}  # the indices of the non-zero hyperparameters
-	# The powers that each a0 coefficient
-	# is taken to for each part of the matrix construction
-	# used for constructing differentiated versions of the kernel
+	kernel::Function
+	n_kern_hyper::T2
+	n_dif::T2
+	n_out::T2
+	x_obs::Vector{T1}
+	y_obs::Vector{T1}
+	noise::Vector{T1}
+	normals::Vector{T1}
+	a::Matrix{T1}
+	non_zero_hyper_inds::Vector{T2}
 	coeff_orders::AbstractArray{T2,6}
 	coeff_coeffs::AbstractArray{T2,4}
-	covariance::Array{T1, 3}  # the measurement covariance at all observations
+	covariance::Array{T1, 3}
 	has_covariance::Bool
 	kernel_changes_with_output::Bool
 
@@ -30,17 +47,17 @@ struct GLO{T1<:Real, T2<:Integer}
 		y_obs::Vector{T1};
 		noise::Vector{T1} = zeros(length(y_obs)),
 		normals::Vector{T1} = ones(n_out),
-		a0::Matrix{T1} = ones(n_out, n_dif),
+		a::Matrix{T1} = ones(n_out, n_dif),
 		covariance::Array{T1, 3} = zeros(length(x_obs), n_out, n_out),
 		kernel_changes_with_output::Bool=false
 		) where {T1<:Real, T2<:Integer}
 
-		@assert size(a0) == (n_out, n_dif)
-		non_zero_hyper_inds = append!(findall(!iszero, collect(Iterators.flatten(a0))), collect(1:n_kern_hyper) .+ length(a0))
-		coeff_orders, coeff_coeffs = coefficient_orders(n_out, n_dif, a=a0)
+		@assert size(a) == (n_out, n_dif)
+		non_zero_hyper_inds = append!(findall(!iszero, collect(Iterators.flatten(a))), collect(1:n_kern_hyper) .+ length(a))
+		coeff_orders, coeff_coeffs = coefficient_orders(n_out, n_dif, a=a)
 		has_covariance = (covariance != zeros(length(x_obs), n_out, n_out))
 
-		return GLO(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a0, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance, kernel_changes_with_output)
+		return GLO(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance, kernel_changes_with_output)
 	end
 	function GLO(
 		kernel::Function,  # kernel function
@@ -51,7 +68,7 @@ struct GLO{T1<:Real, T2<:Integer}
 		y_obs::Vector{T1},  # the flattened, observed data
 		noise::Vector{T1},  # the measurement noise at all observations
 		normals::Vector{T1},  # the normalization of each section of y_obs
-		a0::Matrix{T1},
+		a::Matrix{T1},
 		non_zero_hyper_inds::Vector{T2},
 		coeff_orders::Array{T2,6},
 		coeff_coeffs::Array{T2,4},
@@ -66,18 +83,23 @@ struct GLO{T1<:Real, T2<:Integer}
 		@assert (n_meas * n_out) == length(y_obs) == length(noise)
 		@assert n_meas == size(covariance, 1)
 		@assert length(normals) == n_out
-		@assert size(a0) == (n_out, n_dif)
+		@assert size(a) == (n_out, n_dif)
 		@assert size(coeff_orders) == (n_out, n_out, n_dif, n_dif, n_out, n_dif)  # maybe unnecessary due to the fact that we construct it
 		@assert size(coeff_coeffs) == (n_out, n_out, n_dif, n_dif)  # maybe unnecessary due to the fact that we construct it
-		@assert length(non_zero_hyper_inds) == length(findall(!iszero, collect(Iterators.flatten(a0)))) + n_kern_hyper
+		@assert length(non_zero_hyper_inds) == length(findall(!iszero, collect(Iterators.flatten(a)))) + n_kern_hyper
 		@assert n_out == size(covariance, 2) == size(covariance, 3)
 		@assert (covariance != zeros(n_meas, n_out, n_out)) == has_covariance
 
-		return new{typeof(x_obs[1]),typeof(n_kern_hyper)}(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a0, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance, kernel_changes_with_output)
+		return new{typeof(x_obs[1]),typeof(n_kern_hyper)}(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance, kernel_changes_with_output)
 	end
 end
 
+"""
+	normalize_GLO!(glo)
 
+Set the standardize the outputs in `glo.y_obs` (and `glo.noise`) to have 0-mean
+and unit variance and store the normalization in `glo.normals`
+"""
 function normalize_GLO!(glo::GLO)
 	renorms = ones(glo.n_out)
 	for i in 1:glo.n_out
@@ -88,6 +110,12 @@ function normalize_GLO!(glo::GLO)
 	normalize_GLO!(glo, renorms)
 end
 
+"""
+	normalize_GLO!(glo, renorms)
+
+Divide the outputs in `glo.y_obs` and `glo.noise` and multiply `glo.normals` by
+renorms
+"""
 function normalize_GLO!(glo::GLO, renorms::Vector)
 	@assert length(renorms) == glo.n_out
 	for i in 1:glo.n_out

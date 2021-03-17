@@ -34,8 +34,8 @@ y2 = cos.(xs) .+ (noise2 .* randn(n))
 ys = collect(Iterators.flatten(zip(y1, y2)))
 noise = collect(Iterators.flatten(zip(noise1, noise2)))
 
-glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a0=[[1. 0.1];[0.1 1]])
-total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), [10])
+glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a=[[1. 0.1];[0.1 1]])
+total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), [10])
 workspace = GLOM.nlogL_matrix_workspace(glo, total_hyperparameters)
 
 function f(non_zero_hyper::Vector{T} where T<:Real) = GLOM.nlogL_GLOM!(workspace, glo, non_zero_hyper)  # feel free to add priors here to optimize on the posterior!

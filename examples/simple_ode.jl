@@ -16,8 +16,8 @@ noise2 = 0.2 .* ones(n)
 ys = collect(Iterators.flatten(zip(y1, y2)))
 noise = collect(Iterators.flatten(zip(noise1, noise2)))
 
-glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a0=[[1. 0];[0 1]])
-total_hyperparameters = append!(collect(Iterators.flatten(glo.a0)), [10])
+glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a=[[1. 0];[0 1]])
+total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), [10])
 total_hyperparameters .*= (1 .+ 0.1 .* rand(length(total_hyperparameters)))
 workspace = GLOM.nlogL_matrix_workspace(glo, total_hyperparameters)
 

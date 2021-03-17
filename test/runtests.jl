@@ -28,7 +28,7 @@ end
     ys = collect(Iterators.flatten(zip(y1, y2)))
     noise = collect(Iterators.flatten(zip(noise1, noise2)))
 
-    glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a0=[[1. 0.1];[0.1 1]])
+    glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a=[[1. 0.1];[0.1 1]])
 
     @test GLOM.est_dΣdθ(glo, 1 .+ rand(n_kern_hyper); return_bool=true, print_stuff=false)
     @test GLOM.test_∇nlogL_GLOM(glo, 1 .+ rand(n_kern_hyper), print_stuff=false)
