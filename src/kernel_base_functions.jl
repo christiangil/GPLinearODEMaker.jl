@@ -1,4 +1,13 @@
-"Radial basis function GP kernel (aka squared exonential, ~gaussian)"
+"""
+    se_kernel_base(λ, δ)
+
+Squared exonential GP kernel (~Gaussian). Infinitely mean square differentiable
+(a.k.a. very smooth).
+
+# Arguments
+- `λ::Number`: The kernel lengthscale
+- `δ::Number`: The difference between the inputs (e.g. `t1 - t2`)
+"""
 function se_kernel_base(λ::Number, δ::Number)
     return exp(-δ * δ / (2 * λ * λ))
 end
@@ -64,7 +73,15 @@ end
 # end
 
 
-"Matern 5/2 kernel"
+"""
+    matern52_kernel_base(λ, δ)
+
+Matern 5/2 kernel. Twice mean square differentiable
+
+# Arguments
+- `λ::Number`: The kernel lengthscale
+- `δ::Number`: The difference between the inputs (e.g. `t1 - t2`)
+"""
 function matern52_kernel_base(λ::Number, δ::Number)
     x = sqrt(5) * abs(δ) / λ
     return (1 + x * (1 + x / 3)) * exp(-x)
@@ -84,7 +101,16 @@ end
 #     return (1 + x * (1 + x * (3 / 7 + x * (2 / 21 + x / 105)))) * exp(-x)
 # end
 
-"peicewise polynomial kernel that is twice MS differentiable. See eq 4.21 in RW"
+"""
+    pp_kernel_base(λ, δ)
+
+Piecewise polynomial kernel. Twice mean square differentiable. Equation 4.21 in
+Rasmussen and Williams.
+
+# Arguments
+- `λ::Number`: The kernel lengthscale, and cutoff variable
+- `δ::Number`: The difference between the inputs (e.g. `t1 - t2`)
+"""
 function pp_kernel_base(λ::Number, δ::Number)
     # D = 1  # 1 dimension
     # q = 2  # twice MS differentiable
@@ -125,11 +151,17 @@ end
 #     return (β + δ * δ / 2) ^ -α
 # end
 """
-Rational Quadratic kernel
-Equivalent to adding together SE kernels with the inverse square of the
-lengthscales (τ = SE_λ^-2) are distributed as a Gamma distribution of p(τ|α,μ)
-where α (sometimes written as k) is the shape parameter and μ is the mean of the
-distribution. When α→∞, the RQ is identical to the SE with λ = μ^-1/2.
+    rq_kernel_base(hyperparameters, δ)
+
+Rational Quadratic kernel. Equivalent to adding together SE kernels with the
+inverse square of the lengthscales (τ = SE_λ^-2) are distributed as a Gamma
+distribution of p(τ|α,μ) where α (sometimes written as k) is the shape parameter
+and μ is the mean of the distribution. When α→∞, the RQ is identical to the SE
+with λ = μ^-1/2.
+
+# Arguments
+- `hyperparameters::Vector`: The kernel shape parameter and mean (i.e. `[α, μ]`)
+- `δ::Number`: The difference between the inputs (e.g. `t1 - t2`)
 """
 function rq_kernel_base(hyperparameters::Vector{<:Number}, δ::Number)
 
@@ -142,11 +174,16 @@ end
 
 
 """
-Rational Matern 5/2 kernel
-Equivalent to adding together Matern 5/2 kernels with the inverse of the
-lengthscale (τ = M52_λ^-1) are distributed as a Gamma distribution of p(τ|α,μ)
-where α (sometimes written as k) is the shape parameter and μ is the mean of the
-distribution.
+    rq_kernel_base(hyperparameters, δ)
+
+Rational Matern 5/2 kernel. Equivalent to adding together Matern 5/2 kernels
+with the inverse of the lengthscale (τ = M52_λ^-1) are distributed as a Gamma
+distribution of p(τ|α,μ) where α (sometimes written as k) is the shape parameter
+and μ is the mean of the distribution.
+
+# Arguments
+- `hyperparameters::Vector`: The kernel shape parameter and mean (i.e. `[α, μ]`)
+- `δ::Number`: The difference between the inputs (e.g. `t1 - t2`)
 """
 function rm52_kernel_base(hyperparameters::Vector{<:Number}, δ::Number)
     @assert length(hyperparameters) == 2 "incompatible amount of hyperparameters passed"
