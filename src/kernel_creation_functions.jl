@@ -30,9 +30,11 @@ And then calculate the necessary derivative versions like so:
     @vars δ λ
     kernel_coder(se_kernel_base(λ, δ), "se")
 
-The function is saved in src/kernels/\`kernel_name`_kernel.jl, so you can use it with a command akin to this:
+The function is saved in `loc` * `kernel_name` * "_kernel.jl", so you can use it with a command akin to this:
 
     include(loc * kernel_name * "_kernel.jl")
+
+See also: [`include_kernel`](@ref)
 
 """
 function kernel_coder(

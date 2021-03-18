@@ -27,15 +27,10 @@ Depth = 2
 
 ## User's Guide
 
-Using `GLOM` generally starts with choosing a kernel function and creating a [`GLO`](@ref) object. Several kernel functions have been created already and are stored in `src/kernels`
+Using `GLOM` generally starts with choosing a kernel function (possibly with [`include_kernel`](@ref))
 
 ```@contents
 Pages = ["kernel.md"]
-Depth = 2
-```
-
-```@contents
-Pages = ["glo.md"]
 Depth = 2
 ```
 
@@ -44,12 +39,21 @@ Pages = ["kernel_creation.md"]
 Depth = 2
 ```
 
+and creating a [`GLO`](@ref) object.
 
+```@contents
+Pages = ["glo.md"]
+Depth = 2
+```
+
+Several kernel functions have been created already and are stored in `src/kernels`. Once one has a [`GLO`](@ref), the covariances, likelihoods, and their derivatives can be easily calculated using `GLOM`
 
 ```@contents
 Pages = ["nlogl.md"]
 Depth = 2
 ```
+
+In addition, we have also provided some possible reasonable priors that can be used for the kernel hyperparameters
 
 ```@contents
 Pages = ["priors.md"]
