@@ -90,7 +90,7 @@ plot(make_plot(1, "Sin"), make_plot(2, "Cos"), layout=(2,1), size=(960,540))
 
 # Documentation
 
-For more details and options, see the documentation (WIP)
+For more details and options, see the [documentation](https://christiangil.github.io/GPLinearODEMaker.jl/dev)
 
 You can read about the first usage of this package in [our paper](https://arxiv.org/abs/2009.01085)
 
