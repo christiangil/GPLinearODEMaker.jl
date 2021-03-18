@@ -27,4 +27,7 @@ makedocs(
     ]
 )
 
-# deploydocs(repo = "github.com/christiangil/GPLinearODEMaker.jl.git", push_preview = true)
+deploydocs(
+    repo = "github.com/christiangil/GPLinearODEMaker.jl.git",
+    deploy_config = Documenter.GitHubActions(),
+)
