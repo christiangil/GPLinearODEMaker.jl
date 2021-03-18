@@ -4,21 +4,20 @@ Pkg.instantiate()
 
 import GPLinearODEMaker; GLOM = GPLinearODEMaker
 
-kernel, n_kern_hyper = GLOM.include_kernel("m52")
+kernel, n_kern_hyper = GLOM.include_kernel("se")
 
 n = 100
 xs = 20 .* sort(rand(n))
-y1 = sin.(xs) .+ 0.1 .* randn(n)
 noise1 = 0.1 .* ones(n)
-y2 = cos.(xs) .+ 0.2 .* randn(n)
 noise2 = 0.2 .* ones(n)
+y1 = sin.(xs) .+ (noise1 .* randn(n))
+y2 = cos.(xs) .+ (noise2 .* randn(n))
 
 ys = collect(Iterators.flatten(zip(y1, y2)))
 noise = collect(Iterators.flatten(zip(noise1, noise2)))
 
-glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a=[[1. 0];[0 1]])
+glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a=[[1. 0.1];[0.1 1]])
 total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), [10])
-total_hyperparameters .*= (1 .+ 0.1 .* rand(length(total_hyperparameters)))
 workspace = GLOM.nlogL_matrix_workspace(glo, total_hyperparameters)
 
 using Optim
@@ -67,18 +66,19 @@ end
 
 using Plots
 
-function make_plot(output::Integer; show_draws::Bool=true)
+function make_plot(output::Integer, label::String; show_draws::Bool=false)
     sample_output_indices = output:glo.n_out:n_total_samp_points
     obs_output_indices = output:glo.n_out:length(ys)
-    p = scatter(xs, ys[obs_output_indices], yerror=noise1, leg=false)
+    p = scatter(xs, ys[obs_output_indices], yerror=noise1, label=label)
     if show_draws
         for i in 1:n_show
             plot!(x_samp, show_curves[i, sample_output_indices], leg=false)
         end
     end
-    plot!(x_samp, mean_GP[sample_output_indices]; ribbon=σ[sample_output_indices], alpha=0.3, leg=false)
+    plot!(x_samp, mean_GP[sample_output_indices]; ribbon=σ[sample_output_indices], alpha=0.3, label="GP")
     return p
 end
 
-plot(make_plot(1), make_plot(2), layout=(2,1), size=(1920,1080))
+plot(make_plot(1, "Sin"), make_plot(2, "Cos"), layout=(2,1), size=(960,540))
+savefig("example/simple_ode.png")
 =#

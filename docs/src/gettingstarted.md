@@ -1,20 +1,20 @@
-GPLinearODEMaker.jl
-========
-[![arXiv](https://img.shields.io/badge/arXiv-2009.01085-orange.svg)](https://arxiv.org/abs/2009.01085)
-[![DOI](https://zenodo.org/badge/256533350.svg)](https://zenodo.org/badge/latestdoi/256533350)
+# Getting Started
 
+## Installation
 
-GPLinearODEMaker (GLOM) is a package for finding the likelihood (and derivatives thereof) of multivariate Gaussian processes (GP) that are composed of a linear combination of a univariate GP and its derivatives.
+The most current, tagged version of [GPLinearODEMaker.jl](https://github.com/christiangil/GPLinearODEMaker.jl) can be easily installed using Julia's Pkg
 
-![q_0(t) = m_0(t) + a_{00}X(t) + a_{01}\dot{X}(t) + a_{02}\ddot{X}(t)](https://render.githubusercontent.com/render/math?math=q_0(t)%20%3D%20m_0(t)%20%2B%20a_%7B00%7DX(t)%20%2B%20a_%7B01%7D%5Cdot%7BX%7D(t)%20%2B%20a_%7B02%7D%5Cddot%7BX%7D(t))
+```julia
+Pkg.add("GPLinearODEMaker")
+```
 
-![q_1(t) = m_1(t) + a_{10}X(t) + a_{11}\dot{X}(t) + a_{12}\ddot{X}(t)](https://render.githubusercontent.com/render/math?math=q_1(t)%20%3D%20m_1(t)%20%2B%20a_%7B10%7DX(t)%20%2B%20a_%7B11%7D%5Cdot%7BX%7D(t)%20%2B%20a_%7B12%7D%5Cddot%7BX%7D(t))
+If you would like to contribute to the package, or just want to run the latest (untagged) version, you can use the following
 
-![\vdots](https://render.githubusercontent.com/render/math?math=%5Cvdots)
+```julia
+Pkg.develop("GPLinearODEMaker")
+```
 
-![q_l(t) = m_l(t) + a_{l0}X(t) + a_{l1}\dot{X}(t) + a_{l2}\ddot{X}(t)](https://render.githubusercontent.com/render/math?math=q_l(t)%20%3D%20m_l(t)%20%2B%20a_%7Bl0%7DX(t)%20%2B%20a_%7Bl1%7D%5Cdot%7BX%7D(t)%20%2B%20a_%7Bl2%7D%5Cddot%7BX%7D(t))
-
-where each X(t) is the latent GP and the qs are the time series of the outputs.
+## Example
 
 Here's an example using sine and cosines as the outputs to be modelled. The f, g!, and h! functions at the end give the likelihood, gradient, and Hessian, respectively.
 
@@ -85,31 +85,23 @@ function make_plot(output::Integer, label::String)
 end
 
 plot(make_plot(1, "Sin"), make_plot(2, "Cos"), layout=(2,1), size=(960,540))
-
 ```
+![Resulting plot](https://raw.githubusercontent.com/christiangil/GPLinearODEMaker.jl/master/examples/simple_ode.png)
 
-# Documentation
+Another, more complicated example where `GLOM` is used for modelling stellar variability can be found at [christiangil/GLOM\_RV\_Example](https://github.com/christiangil/GLOM_RV_Example)
 
-For more details and options, see the documentation (WIP)
+## Getting Help
 
-You can read about the first usage of this package in [our paper](https://arxiv.org/abs/2009.01085)
-
-# Installation
-
-The most current, tagged version of [GPLinearODEMaker.jl](https://github.com/christiangil/GPLinearODEMaker.jl) can be easily installed using Julia's Pkg
+To get help on specific functionality you can either look up the
+information here, or if you prefer you can make use of Julia's
+native doc-system. For example here's how to get
+additional information on [`GPLinearODEMaker.GLO`](@ref) within Julia's REPL:
 
 ```julia
-Pkg.add("GPLinearODEMaker")
+?GPLinearODEMaker.GLO
 ```
 
-If you would like to contribute to the package, or just want to run the latest (untagged) version, you can use the following
+If you encounter a bug or would like to participate in the
+development of this package come find us on Github.
 
-```julia
-Pkg.develop("GPLinearODEMaker")
-```
-
-# Citation
-
-If you use `GPLinearODEMaker.jl` in your work, please cite the BibTeX entry given in CITATION.bib
-
-The formula images in this README created with [this website](https://tex-image-link-generator.herokuapp.com/)
+- [christiangil/GPLinearODEMaker.jl](https://github.com/christiangil/GPLinearODEMaker.jl)

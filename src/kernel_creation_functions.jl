@@ -1,15 +1,17 @@
 using SymEngine
 
 """
-    kernel_coder(symbolic_kernel_original, kernel_name; periodic_var="", cutoff_var="")
+    kernel_coder(symbolic_kernel_original, kernel_name; periodic_var="", cutoff_var="", loc="src/kernels/")
 
-Creates the necessary differentiated versions of base kernels required by GLOM.
+Creates the necessary differentiated versions of base kernels required by GLOM
+and saves the script containing them to `loc`
 
 # Arguments
 - `symbolic_kernel_original::Basic`: Kernel function created using variables declared with `SymEngine`'s `@vars` macro
 - `kernel_name::String`: The name the kernel function will be saved with
 - `periodic_var::String=""`: If changed, tries to convert the named variable (currently only one) into a periodic variable by replacing it with `2*sin(π*δ/periodic_var)`
 - `cutoff_var::String=""`: If changed, makes the kernel return 0 for `abs(δ) > cutoff_var`
+- `loc::String="src/kernels/"`: The location where the script will be saved
 
 # Extra Info
 The created function will look like this
@@ -26,18 +28,19 @@ For example, you could define a kernel like so:
 And then calculate the necessary derivative versions like so:
 
     @vars δ λ
-    kernel_coder(se_kernel_base(λ, δ), "se_kernel")
+    kernel_coder(se_kernel_base(λ, δ), "se")
 
-The function is saved in src/kernels/\$kernel_name.jl, so you can use it with a command akin to this:
+The function is saved in src/kernels/\`kernel_name`_kernel.jl, so you can use it with a command akin to this:
 
-    include("src/kernels/" * kernel_name * ".jl")
+    include(loc * kernel_name * "_kernel.jl")
 
 """
 function kernel_coder(
     symbolic_kernel_original::Basic,
     kernel_name::String;
     periodic_var::String="",
-    cutoff_var::String="")
+    cutoff_var::String="",
+    loc::String="src/kernels/")
     # add_white_noise::Bool=false)
 
     δ = symbols("δ")
@@ -83,7 +86,7 @@ function kernel_coder(
 
     # open the file we will write to
     kernel_name *= "_kernel"
-    file_loc = "src/kernels/" * kernel_name * ".jl"
+    file_loc = loc * kernel_name * ".jl"
     io = open(file_loc, "w")
 
     # begin to write the function including assertions that the amount of hyperparameters are correct
