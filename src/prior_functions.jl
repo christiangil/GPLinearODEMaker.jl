@@ -168,7 +168,7 @@ end
 
 
 """
-    log_Rayleigh(x, σ; d=0)
+    log_Rayleigh(x, σ; d=0, cutoff=Inf)
 
 Log of the Rayleigh PDF.
 https://en.wikipedia.org/wiki/Rayleigh_distribution
@@ -177,15 +177,18 @@ https://en.wikipedia.org/wiki/Rayleigh_distribution
 - `x::Real`: Input
 - `σ::Real`: The mode
 - `d::Integer=0`: How many derivatives to take
+- `cutoff::Real=Inf`: Where to cutoff the tail of the distribution
 """
-function log_Rayleigh(x::Real, σ::Real; d::Integer=0)
-    @assert 0 <= d <= 2 "Can only differentiate up to two times"
+function log_Rayleigh(x::Real, σ::Real; d::Integer=0, cutoff::Real=Inf)
+    @assert 0 <= d <= 2
+    @assert cutoff > 0
+    cutoff == Inf ? normalization = 0 : normalization = -log(1 - exp(-cutoff * cutoff / 2 / σ / σ))
     if d == 0
-        0 <= x <= 1 ? val = -(x * x / (2 * σ * σ)) + log(x / σ / σ) -  log(1 - exp(-1 / (2 * σ * σ))) : val = -Inf
+        0 <= x <= cutoff ? val = normalization - (x * x / 2 / σ / σ) + log(x / σ / σ) : val = -Inf
     elseif d == 1
-        0 <= x <= 1 ? val = 1 / x - x / σ / σ : val = 0
+        0 <= x <= cutoff ? val = 1 / x - x / σ / σ : val = 0
     elseif d == 2
-        0 <= x <= 1 ? val = -1 / x / x - 1 / σ / σ : val = 0
+        0 <= x <= cutoff ? val = -1 / x / x - 1 / σ / σ : val = 0
     end
     return val
 end
@@ -335,38 +338,38 @@ end
 
 
 """
-    log_rot_Rayleigh(xs; d=[0,0], σ=1/5)
+    log_rot_Rayleigh(xs; d=[0,0], σ=1/5, cutoff=Inf)
 
-Log of the 2D rotated Rayleigh PDF that is cutoff at r=1
-ONLY NORMALIZED according to σ = 1/5
+Log of the 2D rotated Rayleigh PDF
 
 # Arguments
 - `xs::Real`: Inputs
 - `d::Vector{<:Integer}=[0,0]`: How many derivatives to take
 - `σ::Real=1/5`: the radial mode of the distribution
+- `cutoff::Real=Inf`: Where to cutoff the tail of the distribution
 """
-function log_rot_Rayleigh(xs::Vector{<:Real}; d::Vector{<:Integer}=[0,0], σ::Real=1/5)
-    @assert minimum(d) >= 0
-    @assert maximum(d) <= 2
+function log_rot_Rayleigh(xs::Vector{<:Real}, σ::Real; d::Vector{<:Integer}=[0,0], cutoff::Real=Inf)
+    @assert all(0 .<= d .<= 2)
     @assert sum(d) <= 2
+    @assert cutoff > 0
 
     @assert length(xs) == length(d) == 2
     r_sq = dot(xs, xs)  # x^2 + y^2
     r = sqrt(r_sq)
     σ_sq = σ ^ 2
-    log_norm = -2 * log(σ) - 0.454215
+    cutoff == Inf ? normalization = -log(2 * σ * σ * π * π * π) / 2 : normalization = -log(2 * π) - log(sqrt(π / 2) * σ * erf(cutoff / sqrt(2) / σ) - cutoff * exp(- cutoff * cutoff / 2 / σ / σ))
     if d == [0,0]
-        0 <= r < 1 ? val = -r_sq / (2 * σ_sq) + log(r) + log_norm : val = -Inf
+        0 <= r < cutoff ? val = normalization - r_sq / (2 * σ_sq) + log(r) - (2 * log(σ)) : val = -Inf
     elseif d == [0,1]
-        0 <= r < 1 ? val = -xs[2] * (r_sq - σ_sq) / (r_sq * σ_sq) : val = 0
+        0 <= r < cutoff ? val = -xs[2] * (r_sq - σ_sq) / (r_sq * σ_sq) : val = 0
     elseif d == [0,2]
-        0 <= r < 1 ? val = -(xs[1] ^ 4 + xs[1] ^ 2 * (2 * xs[2] ^ 2 - σ_sq) + xs[2] ^ 2 * (xs[2] ^ 2 + σ_sq)) / (r_sq ^ 2 * σ_sq) : val = 0
+        0 <= r < cutoff ? val = -(xs[1] ^ 4 + xs[1] ^ 2 * (2 * xs[2] ^ 2 - σ_sq) + xs[2] ^ 2 * (xs[2] ^ 2 + σ_sq)) / (r_sq ^ 2 * σ_sq) : val = 0
     elseif d == [1,0]
-        0 <= r < 1 ? val = -xs[1] * (r_sq - σ_sq) / (r_sq * σ_sq) : val = 0
+        0 <= r < cutoff ? val = -xs[1] * (r_sq - σ_sq) / (r_sq * σ_sq) : val = 0
     elseif d == [1,1]
-        0 <= r < 1 ? val = -2 * xs[1] * xs[2] / r_sq ^ 2 : val = 0
+        0 <= r < cutoff ? val = -2 * xs[1] * xs[2] / r_sq ^ 2 : val = 0
     elseif d == [2,0]
-        0 <= r < 1 ? val = -(xs[2] ^ 4 + xs[2] ^ 2 * (2 * xs[1] ^ 2 - σ_sq) + xs[1] ^ 2 * (xs[1] ^ 2 + σ_sq)) / (r_sq ^ 2 * σ_sq) : val = 0
+        0 <= r < cutoff ? val = -(xs[2] ^ 4 + xs[2] ^ 2 * (2 * xs[1] ^ 2 - σ_sq) + xs[1] ^ 2 * (xs[1] ^ 2 + σ_sq)) / (r_sq ^ 2 * σ_sq) : val = 0
     end
     return val
 end
