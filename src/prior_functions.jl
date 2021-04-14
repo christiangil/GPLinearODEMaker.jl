@@ -105,7 +105,7 @@ function log_gaussian(x::Real, parameters::Vector{<:Real}; d::Integer=0, min::Re
     assert_positive(σ)
     @assert min < max
     if d == 0
-        (min < x < max) ? val = -((x - μ)^2/(2 * σ * σ)) - log(sqrt(2 * π) * σ) - log(1 - gauss_cdf(min - μ) - gauss_cdf(μ - max)) : val = -Inf
+        (min < x < max) ? val = (-((x - μ) / σ) ^ 2 - log(2 * π * σ * σ)) / 2 - log(1 - gauss_cdf(min - μ) - gauss_cdf(μ - max)) : val = -Inf
     elseif d == 1
         (min < x < max) ? val = -(x - μ)/(σ * σ) : val = 0
     else
