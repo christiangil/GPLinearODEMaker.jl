@@ -360,14 +360,14 @@ Optionally returns the `Σ` back as well.
     measurement_noise::Vector{T},
     kernel_hyperparameters::Vector{T};
     ignore_asymmetry::Bool=false,
-    return_both::Bool=false
+    kwargs...
     ) where {T<:Real} =
     Σ_observations(
         symmetric_A(
             covariance(kernel_func, x_obs, x_obs, kernel_hyperparameters);
             ignore_asymmetry=ignore_asymmetry),
         measurement_noise;
-        return_both=return_both)
+        kwargs...)
 
 """
     Σ_observations(glo, total_hyperparameters; ignore_asymmetry=false, return_both=false)
@@ -380,12 +380,12 @@ function Σ_observations(
     glo::GLO,
     total_hyperparameters::Vector{T};
     ignore_asymmetry::Bool=false,
-    return_both::Bool=false
+    kwargs...
     ) where {T<:Real}
 
     return glo.has_covariance ?
-        Σ_observations(symmetric_A(covariance(glo, total_hyperparameters); ignore_asymmetry=ignore_asymmetry), glo.covariance; return_both=return_both) :
-        Σ_observations(symmetric_A(covariance(glo, total_hyperparameters); ignore_asymmetry=ignore_asymmetry), glo.noise; return_both=return_both)
+        Σ_observations(symmetric_A(covariance(glo, total_hyperparameters); ignore_asymmetry=ignore_asymmetry), glo.covariance; kwargs...) :
+        Σ_observations(symmetric_A(covariance(glo, total_hyperparameters); ignore_asymmetry=ignore_asymmetry), glo.noise; kwargs...)
 end
 
 
@@ -438,17 +438,17 @@ function covariance_permutations(
     x_samp::Vector{T},
     measurement_noise::Vector{T},
     kernel_hyperparameters::Vector{T};
-    return_both::Bool=false
+    kwargs...
     ) where {T<:Real}
 
     Σ_samp = covariance(kernel_func, x_samp, x_samp, kernel_hyperparameters)
     Σ_samp_obs = covariance(kernel_func, x_samp, x_obs, kernel_hyperparameters; ignore_asymmetry=true)
     Σ_obs_samp = transpose(Σ_samp_obs)
     if return_both
-        Σ_obs, Σ_obs_raw = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; return_both=return_both)
+        Σ_obs, Σ_obs_raw = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; kwargs...)
         return Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw
     else
-        Σ_obs = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; return_both=return_both)
+        Σ_obs = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; kwargs...)
         return Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp
     end
 end
@@ -464,17 +464,17 @@ function covariance_permutations(
     glo::GLO,
     x_samp::Vector{T},
     total_hyperparameters::Vector{T};
-    return_both::Bool=false
+    kwargs...
     ) where {T<:Real}
 
     Σ_samp = covariance(glo, x_samp, x_samp, total_hyperparameters)
     Σ_samp_obs = covariance(glo, x_samp, glo.x_obs, total_hyperparameters; ignore_asymmetry=true)
     Σ_obs_samp = transpose(Σ_samp_obs)
     if return_both
-        Σ_obs, Σ_obs_raw = Σ_observations(glo, total_hyperparameters; return_both=return_both)
+        Σ_obs, Σ_obs_raw = Σ_observations(glo, total_hyperparameters; kwargs...)
         return Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw
     else
-        Σ_obs = Σ_observations(glo, total_hyperparameters; return_both=return_both)
+        Σ_obs = Σ_observations(glo, total_hyperparameters; kwargs...)
         return Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp
     end
 end
@@ -561,6 +561,20 @@ function GP_posteriors_from_covariances(
 
 end
 
+
+"""
+    GP_posteriors_from_covariances(y_obs, Σ_obs, Σ_obs_raw)
+
+Calculate the observed posterior mean for the GP used to calculate `Σ_obs` and
+`Σ_obs_raw`
+"""
+GP_posteriors_from_covariances(
+    y_obs::Vector{T},
+    Σ_obs::Cholesky{T,Matrix{T}},
+    Σ_obs_raw::Symmetric{T,Matrix{T}}) where {T<:Real} =
+    Σ_obs_raw * (Σ_obs \ y_obs)
+
+
 """
     GP_posteriors(kernel_func, x_obs, y_obs, x_samp, measurement_noise, kernel_hyperparameters; return_mean_obs=false, kwargs...)
 
@@ -587,6 +601,7 @@ function GP_posteriors(
     end
 end
 
+
 """
     GP_posteriors(glo, x_samp, total_hyperparameters; return_mean_obs=false, y_obs=glo.y_obs, kwargs...)
 
@@ -610,6 +625,23 @@ function GP_posteriors(
         return GP_posteriors_from_covariances(y_obs, Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp; kwargs...)
     end
 
+end
+
+
+"""
+    GP_posteriors(glo, total_hyperparameters; y_obs=glo.y_obs, kwargs...)
+
+Calculate the posterior mean at `glo.x_obs` for the GP described by `glo` and
+`total_hyperparameters`
+"""
+function GP_posteriors(
+    glo::GLO,
+    total_hyperparameters::Vector{T};
+    y_obs::Vector{T}=glo.y_obs,
+    kwargs...
+    ) where {T<:Real}
+    Σ_obs, Σ_obs_raw = Σ_observations(glo, total_hyperparameters; return_both=true, kwargs...)
+    return GP_posteriors_from_covariances(y_obs, Σ_obs, Σ_obs_raw)
 end
 
 

@@ -1,7 +1,6 @@
 using Test
 using LinearAlgebra
-import GPLinearODEMaker
-GLOM = GPLinearODEMaker
+import GPLinearODEMaker; GLOM = GPLinearODEMaker
 
 println("Testing...")
 
