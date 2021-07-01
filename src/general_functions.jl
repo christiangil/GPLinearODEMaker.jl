@@ -14,7 +14,7 @@ julia> GPLinearODEMaker.symmetric_A(A; ignore_asymmetry=true)
  0.5  1.0
 ```
 """
-function symmetric_A(A::Union{Matrix{T},Symmetric{T,Matrix{T}}}; ignore_asymmetry::Bool=false, chol::Bool=false) where {T<:Real}
+function symmetric_A(A::Union{Matrix{T},Symmetric}; ignore_asymmetry::Bool=false, chol::Bool=false) where {T<:Real}
 
     # an arbitrary threshold that is meant to catch numerical errors
     thres = max(1e-6 * maximum(abs.(A)), 1e-8)
@@ -59,9 +59,9 @@ julia> GPLinearODEMaker.symmetrize_A(A)
  0.5  1.0
 ```
 """
-symmetrize_A(A::Union{Matrix{T},Symmetric{T,Matrix{T}}}) where {T<:Real} =
+symmetrize_A(A::Union{Matrix{T},Symmetric}) where {T<:Real} =
     Symmetric((A + transpose(A)) / 2)
-symmetrize_A(A::Symmetric{T,Matrix{T}}) where {T<:Real} = A
+symmetrize_A(A::Symmetric) where {T<:Real} = A
 
 
 """
@@ -81,7 +81,7 @@ U factor:
   ⋅   3.0
 ```
 """
-function ridge_chol(A::Union{Matrix{T},Symmetric{T,Matrix{T}}}) where {T<:Real}
+function ridge_chol(A::Union{Matrix{T},Symmetric}) where {T<:Real}
 
     # only add a small ridge (based on the smallest eigenvalue) if necessary
     try
@@ -96,7 +96,7 @@ function ridge_chol(A::Union{Matrix{T},Symmetric{T,Matrix{T}}}) where {T<:Real}
     end
 
 end
-ridge_chol(A::Cholesky{T,Matrix{T}}) where {T<:Real} = A
+ridge_chol(A::Cholesky) where {T<:Real} = A
 
 """
     reconstruct_array(non_zero_entries, template_A)
@@ -148,7 +148,7 @@ end
 
 Extends ndims to return 2 if passed a Cholesky object
 """
-ndims(A::Cholesky{T,Matrix{T}}) where {T<:Real} = 2
+ndims(A::Cholesky) where {T<:Real} = 2
 
 
 """
@@ -242,7 +242,7 @@ Hessian matrix of the negative log-likelihood. Could possiblly improve with
 methods from Ruli et al. 2016 (https://arxiv.org/pdf/1502.06440.pdf)?
 """
 function log_laplace_approximation(
-    H::Union{Symmetric{T,Matrix{T}},Matrix{T}},
+    H::Union{Symmetric,Matrix{T}},
     g::Real,
     logh::Real;
     λ::Real=1

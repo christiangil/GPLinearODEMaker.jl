@@ -388,7 +388,7 @@ NOTE THAT THAT WHEN USING lows!=[-∞,...], THIS IS NOT PROPERLY NORMALIZED
 - `d::Vector{<:Integer}=[0,0]`: How many derivatives to take
 - `lows::Vector=zeros(T, 2) .- Inf`: The lower cutoffs of the distribution
 """
-function log_bvnormal(xs::Vector{T}, Σ::Cholesky{T,Matrix{T}}; μ::Vector{T}=zeros(T, 2), d::Vector{<:Integer}=[0,0], lows::Vector{T}=zeros(T, 2) .- Inf) where {T<:Real}
+function log_bvnormal(xs::Vector{T}, Σ::Cholesky; μ::Vector{T}=zeros(T, 2), d::Vector{<:Integer}=[0,0], lows::Vector{T}=zeros(T, 2) .- Inf) where {T<:Real}
     @assert minimum(d) >= 0
     @assert maximum(d) <= 2
     @assert sum(d) <= 2

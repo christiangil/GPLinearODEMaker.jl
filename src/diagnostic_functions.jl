@@ -275,7 +275,7 @@ julia> GPLinearODEMaker.test_∇∇([1. 2; 3 4], [0. 2; 3 4]; print_stuff=false)
 false
 ```
 """
-function test_∇∇(est_H::Union{Symmetric{T,Matrix{T}},Matrix{T}}, H::Union{Symmetric{T,Matrix{T}},Matrix{T}}; print_stuff::Bool=true, function_name::String="function", rtol::Real=1e-3) where {T<:Real}
+function test_∇∇(est_H::Union{Symmetric,Matrix{T}}, H::Union{Symmetric,Matrix{T}}; print_stuff::Bool=true, function_name::String="function", rtol::Real=1e-3) where {T<:Real}
 
     if print_stuff
         println()

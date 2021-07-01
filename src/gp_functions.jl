@@ -397,7 +397,7 @@ Calculate the GP posterior standard deviation at each sampled point. Algorithm
 """
 function get_σ(
     L_obs::LowerTriangular{T,Matrix{T}},
-    Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
+    Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric,Matrix{T}},
     diag_Σ_samp::Vector{T}
     ) where {T<:Real}
 
@@ -489,11 +489,11 @@ Calculate the sampled posterior mean and std, observed posterior mean, and
 """
 function GP_posteriors_from_covariances(
     y_obs::Vector{T},
-    Σ_samp::Union{Cholesky{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
-    Σ_obs::Cholesky{T,Matrix{T}},
-    Σ_samp_obs::Union{Symmetric{T,Matrix{T}},Matrix{T}},
-    Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
-    Σ_obs_raw::Symmetric{T,Matrix{T}};
+    Σ_samp::Union{Cholesky,Symmetric,Matrix{T}},
+    Σ_obs::Cholesky,
+    Σ_samp_obs::Union{Symmetric,Matrix{T}},
+    Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric,Matrix{T}},
+    Σ_obs_raw::Symmetric;
     return_Σ::Bool=true,
     kwargs...
     ) where {T<:Real}
@@ -531,10 +531,10 @@ and `Σ_obs_samp`
 """
 function GP_posteriors_from_covariances(
     y_obs::Vector{T},
-    Σ_samp::Union{Cholesky{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}},
-    Σ_obs::Cholesky{T,Matrix{T}},
-    Σ_samp_obs::Union{Symmetric{T,Matrix{T}},Matrix{T}},
-    Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric{T,Matrix{T}},Matrix{T}};
+    Σ_samp::Union{Cholesky,Symmetric,Matrix{T}},
+    Σ_obs::Cholesky,
+    Σ_samp_obs::Union{Symmetric,Matrix{T}},
+    Σ_obs_samp::Union{Transpose{T,Matrix{T}},Symmetric,Matrix{T}};
     return_Σ::Bool=true,
     kwargs...
     ) where {T<:Real}
@@ -570,8 +570,8 @@ Calculate the observed posterior mean for the GP used to calculate `Σ_obs` and
 """
 GP_posteriors_from_covariances(
     y_obs::Vector{T},
-    Σ_obs::Cholesky{T,Matrix{T}},
-    Σ_obs_raw::Symmetric{T,Matrix{T}}) where {T<:Real} =
+    Σ_obs::Cholesky,
+    Σ_obs_raw::Symmetric) where {T<:Real} =
     Σ_obs_raw * (Σ_obs \ y_obs)
 
 
@@ -767,7 +767,7 @@ Negative log likelihood for data `y` assuming it was drawn from a multivariate
 normal distribution with 0 mean and covariance `Σ` (usually `Σ + noise`)
 """
 function nlogL(
-    Σ::Cholesky{T,Matrix{T}},
+    Σ::Union{Cholesky,Diagonal},
     y::Vector{T};
     α::Vector{T} = Σ \ y,
     nlogL_normalization::T=logdet(Σ)+length(y)*log(2*π)
@@ -941,7 +941,7 @@ derivatives. Used to prevent recalculations during optimization.
 """
 struct nlogL_matrix_workspace{T<:Real}
     nlogL_hyperparameters::Vector{T}
-    Σ_obs::Cholesky{T,Matrix{T}}
+    Σ_obs::Cholesky
     ∇nlogL_hyperparameters::Vector{T}
     βs::Vector{Matrix{T}}
 
@@ -958,7 +958,7 @@ struct nlogL_matrix_workspace{T<:Real}
     end
     nlogL_matrix_workspace(
         nlogL_hyperparameters::Vector{T},
-        Σ_obs::Cholesky{T,Matrix{T}},
+        Σ_obs::Cholesky,
         ∇nlogL_hyperparameters::Vector{T},
         βs::Vector{Matrix{T}}
         ) where T<:Real = new{typeof(nlogL_hyperparameters[1])}(nlogL_hyperparameters, Σ_obs, ∇nlogL_hyperparameters, βs)
@@ -973,7 +973,7 @@ Calculates the quantities shared by the nlogL and ∇nlogL calculations
 function calculate_shared_nlogL_matrices(
     glo::GLO,
     non_zero_hyperparameters::Vector{<:Real};
-    Σ_obs::Cholesky{T,Matrix{T}} where T<:Real=Σ_observations(glo, reconstruct_total_hyperparameters(glo, non_zero_hyperparameters); ignore_asymmetry=true))
+    Σ_obs::Cholesky where T<:Real=Σ_observations(glo, reconstruct_total_hyperparameters(glo, non_zero_hyperparameters); ignore_asymmetry=true))
 
     # this allows us to prevent the optimizer from seeing the constant zero coefficients
     total_hyperparameters = reconstruct_total_hyperparameters(glo, non_zero_hyperparameters)
@@ -1179,7 +1179,7 @@ construct the covariance matrices.
 function ∇∇nlogL_GLOM(
     glo::GLO,
     total_hyperparameters::Vector{T},
-    Σ_obs::Cholesky{T,Matrix{T}},
+    Σ_obs::Cholesky,
     y_obs::Vector{T},
     α::Vector{T},
     βs::Array{Matrix{T},1}
