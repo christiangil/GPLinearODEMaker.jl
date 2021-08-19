@@ -97,8 +97,8 @@ end
 """
 	normalize_GLO!(glo)
 
-Set the standardize the outputs in `glo.y_obs` (and `glo.noise`) to have 0-mean
-and unit variance and store the normalization in `glo.normals`
+Standardize the outputs in `glo.y_obs` (and `glo.noise`) to have 0-mean and unit
+variance and store the normalization in `glo.normals`
 """
 function normalize_GLO!(glo::GLO)
 	renorms = ones(glo.n_out)
