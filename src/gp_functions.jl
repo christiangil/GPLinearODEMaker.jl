@@ -446,10 +446,10 @@ function covariance_permutations(
     Σ_samp_obs = covariance(kernel_func, x_samp, x_obs, kernel_hyperparameters; ignore_asymmetry=true)
     Σ_obs_samp = transpose(Σ_samp_obs)
     if return_both
-        Σ_obs, Σ_obs_raw = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; kwargs...)
+        Σ_obs, Σ_obs_raw = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; return_both=return_both, kwargs...)
         return Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw
     else
-        Σ_obs = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; kwargs...)
+        Σ_obs = Σ_observations(kernel_func, x_obs, measurement_noise, kernel_hyperparameters; return_both=return_both, kwargs...)
         return Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp
     end
 end
@@ -473,10 +473,10 @@ function covariance_permutations(
     Σ_samp_obs = covariance(glo, x_samp, glo.x_obs, total_hyperparameters; ignore_asymmetry=true)
     Σ_obs_samp = transpose(Σ_samp_obs)
     if return_both
-        Σ_obs, Σ_obs_raw = Σ_observations(glo, total_hyperparameters; kwargs...)
+        Σ_obs, Σ_obs_raw = Σ_observations(glo, total_hyperparameters; return_both=return_both, kwargs...)
         return Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp, Σ_obs_raw
     else
-        Σ_obs = Σ_observations(glo, total_hyperparameters; kwargs...)
+        Σ_obs = Σ_observations(glo, total_hyperparameters; return_both=return_both, kwargs...)
         return Σ_samp, Σ_obs, Σ_samp_obs, Σ_obs_samp
     end
 end
