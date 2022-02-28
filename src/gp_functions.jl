@@ -438,6 +438,7 @@ function covariance_permutations(
     x_samp::Vector{T},
     measurement_noise::Vector{T},
     kernel_hyperparameters::Vector{T};
+    return_both = false,
     kwargs...
     ) where {T<:Real}
 
@@ -464,6 +465,7 @@ function covariance_permutations(
     glo::GLO,
     x_samp::Vector{T},
     total_hyperparameters::Vector{T};
+    return_both = false,
     kwargs...
     ) where {T<:Real}
 
