@@ -4,7 +4,7 @@ Pkg.instantiate()
 
 import GPLinearODEMaker; GLOM = GPLinearODEMaker
 
-kernel, n_kern_hyper = GLOM.include_kernel("se")
+kernel, n_kern_hyper = GLOM.include_kernel("shift")
 
 n = 100
 xs = 20 .* sort(rand(n))
@@ -16,8 +16,8 @@ y2 = cos.(xs) .+ (noise2 .* randn(n))
 ys = collect(Iterators.flatten(zip(y1, y2)))
 noise = collect(Iterators.flatten(zip(noise1, noise2)))
 
-glo = GLOM.GLO(kernel, n_kern_hyper, 2, 2, xs, ys; noise = noise, a=[[1. 0.1];[0.1 1]])
-total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), [10])
+glo = GLOM.GLO(kernel, n_kern_hyper, 1, 2, xs, ys; noise = noise, a=reshape([1., 1], (2,1)), kernel_changes_with_output=true)
+total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), [2., -π/2])
 workspace = GLOM.nlogL_matrix_workspace(glo, total_hyperparameters)
 
 using Optim
@@ -50,7 +50,7 @@ end
 fit_total_hyperparameters = GLOM.reconstruct_total_hyperparameters(glo, result.minimizer)
 
 n_samp_points = convert(Int64, max(500, round(2 * sqrt(2) * length(glo.x_obs))))
-x_samp = collect(range(minimum(glo.x_obs); stop=maximum(glo.x_obs), length=n_samp_points))
+x_samp = collect(range(minimum(glo.x_obs)-5; stop=maximum(glo.x_obs)+5, length=n_samp_points))
 n_total_samp_points = n_samp_points * glo.n_out
 n_meas = length(glo.x_obs)
 
@@ -63,6 +63,7 @@ L = GLOM.ridge_chol(Σ).L
 for i in 1:n_show
     show_curves[i, :] = L * randn(n_total_samp_points) + mean_GP
 end
+show_curves
 
 using Plots
 
@@ -79,6 +80,6 @@ function make_plot(output::Integer, label::String; show_draws::Bool=false)
     return p
 end
 
-plot(make_plot(1, "Sin"), make_plot(2, "Cos"), layout=(2,1), size=(960,540))
-savefig("examples/simple_ode.png")
+plot(make_plot(1, "Sin"; show_draws=true), make_plot(2, "Cos"; show_draws=true), layout=(2,1), size=(960,540))
+savefig("examples/shift_ode.png")
 =#

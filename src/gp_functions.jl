@@ -230,19 +230,19 @@ function covariance(
     for i in 1:n_out
         for j in 1:n_out
             # if i <= j  # only need to calculate one set of the off-diagonal blocks
-            if glo.kernel_changes_with_output
-                outputs = [i,j]
-                for i in 0:(2 * n_dif - 2)
-                    dorder[1] = rem(i - 1, 2) + 1
-                    dorder[2] = 2 * div(i - 1, 2)
-                    # things that have been differentiated an even amount of times are symmetric about t1-t2==0
-                    if iseven(i)
-                        A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> glo.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=true))
-                    else
-                        A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> glo.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder))
+                if glo.kernel_changes_with_output
+                    outputs = [i,j]
+                    for i in 0:(2 * n_dif - 2)
+                        dorder[1] = rem(i - 1, 2) + 1
+                        dorder[2] = 2 * div(i - 1, 2)
+                        # things that have been differentiated an even amount of times are symmetric about t1-t2==0
+                        if iseven(i) && outputs[1]==outputs[2]
+                            A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> glo.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=true))
+                        else
+                            A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> glo.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder))
+                        end
                     end
                 end
-            end
                 for k in 1:n_dif
                     for l in 1:n_dif
                         # if the coefficient for the GLOM coefficients is non-zero
