@@ -236,11 +236,11 @@ function covariance(
                         dorder[1] = rem(i - 1, 2) + 1
                         dorder[2] = 2 * div(i - 1, 2)
                         # things that have been differentiated an even amount of times are symmetric about t1-t2==0
-                        if iseven(i) && outputs[1]==outputs[2]
-                            A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> glo.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=true))
-                        else
-                            A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> glo.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder))
-                        end
+                        # if iseven(i) && outputs[1]==outputs[2]
+                        #     A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> glo.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder, symmetric=true))
+                        # else
+                        A_list[i + 1] = copy(covariance!(holder, (hyper, δ, dord) -> glo.kernel(hyper, δ, dord; outputs=outputs), x1list, x2list, kernel_hyperparameters; dorder=dorder))
+                        # end
                     end
                 end
                 for k in 1:n_dif
@@ -948,7 +948,7 @@ struct nlogL_matrix_workspace{T<:Real}
     βs::Vector{Matrix{T}}
 
     function nlogL_matrix_workspace(glo::GLO,
-        total_hyperparameters::Vector{<:Real})
+        total_hyperparameters::Vector{<:Real}; kwargs...)
 
         total_hyper = reconstruct_total_hyperparameters(glo::GLO, total_hyperparameters)
         Σ_obs = Σ_observations(glo, total_hyper; ignore_asymmetry=true)
@@ -956,7 +956,7 @@ struct nlogL_matrix_workspace{T<:Real}
             total_hyper,
             Σ_obs,
             copy(total_hyper),
-            [Σ_obs \ covariance(glo, total_hyper; dΣdθs_total=[i]) for i in glo.non_zero_hyper_inds])
+            [Σ_obs \ covariance(glo, total_hyper; dΣdθs_total=[i], kwargs...) for i in glo.non_zero_hyper_inds])
     end
     nlogL_matrix_workspace(
         nlogL_hyperparameters::Vector{T},
@@ -975,7 +975,7 @@ Calculates the quantities shared by the nlogL and ∇nlogL calculations
 function calculate_shared_nlogL_matrices(
     glo::GLO,
     non_zero_hyperparameters::Vector{<:Real};
-    Σ_obs::Cholesky where T<:Real=Σ_observations(glo, reconstruct_total_hyperparameters(glo, non_zero_hyperparameters); ignore_asymmetry=true))
+    Σ_obs::Cholesky=Σ_observations(glo, reconstruct_total_hyperparameters(glo, non_zero_hyperparameters); ignore_asymmetry=true))
 
     # this allows us to prevent the optimizer from seeing the constant zero coefficients
     total_hyperparameters = reconstruct_total_hyperparameters(glo, non_zero_hyperparameters)
@@ -1001,7 +1001,7 @@ function calculate_shared_nlogL_matrices!(
 
     if workspace.nlogL_hyperparameters != total_hyperparameters
         workspace.nlogL_hyperparameters[:] = total_hyperparameters
-        workspace.Σ_obs.factors[:,:] = Σ_observations(glo, total_hyperparameters).factors
+        workspace.Σ_obs.factors[:,:] = Σ_observations(glo, total_hyperparameters; ignore_asymmetry=true).factors
     end
 
 end
@@ -1017,9 +1017,9 @@ function calculate_shared_∇nlogL_matrices(
     non_zero_hyperparameters::Vector{<:Real};
     kwargs...)
 
-    total_hyperparameters, Σ_obs = calculate_shared_nlogL_matrices(glo, non_zero_hyperparameters; kwargs...)
+    total_hyperparameters, Σ_obs = calculate_shared_nlogL_matrices(glo, non_zero_hyperparameters)
 
-    βs = [Σ_obs \ covariance(glo, total_hyperparameters; dΣdθs_total=[i]) for i in glo.non_zero_hyper_inds]
+    βs = [Σ_obs \ covariance(glo, total_hyperparameters; dΣdθs_total=[i], kwargs...) for i in glo.non_zero_hyper_inds]
 
     return total_hyperparameters, Σ_obs, βs
 
@@ -1035,13 +1035,14 @@ stores them in the existing `workspace`
 function calculate_shared_∇nlogL_matrices!(
     workspace::nlogL_matrix_workspace,
     glo::GLO,
-    non_zero_hyperparameters::Vector{<:Real})
+    non_zero_hyperparameters::Vector{<:Real};
+    kwargs...)
 
     calculate_shared_nlogL_matrices!(workspace, glo, non_zero_hyperparameters)
 
     if workspace.∇nlogL_hyperparameters != workspace.nlogL_hyperparameters
         workspace.∇nlogL_hyperparameters[:] = workspace.nlogL_hyperparameters
-        workspace.βs[:] = [workspace.Σ_obs \ covariance(glo, workspace.∇nlogL_hyperparameters; dΣdθs_total=[i]) for i in findall(!iszero, workspace.∇nlogL_hyperparameters)]
+        workspace.βs[:] = [workspace.Σ_obs \ covariance(glo, workspace.∇nlogL_hyperparameters; dΣdθs_total=[i], kwargs...) for i in findall(!iszero, workspace.∇nlogL_hyperparameters)]
     end
 
 end
@@ -1162,10 +1163,11 @@ function ∇nlogL_GLOM!(
     workspace::nlogL_matrix_workspace,
     glo::GLO,
     total_hyperparameters::Vector{T};
-    y_obs::Vector{T}=copy(glo.y_obs)
+    y_obs::Vector{T}=copy(glo.y_obs),
+    kwargs...
     ) where {T<:Real}
 
-    calculate_shared_∇nlogL_matrices!(workspace, glo, total_hyperparameters)
+    calculate_shared_∇nlogL_matrices!(workspace, glo, total_hyperparameters; kwargs...)
 
     return ∇nlogL(y_obs, workspace.Σ_obs \ y_obs, workspace.βs)
 
@@ -1233,10 +1235,11 @@ function ∇∇nlogL_GLOM!(
     workspace::nlogL_matrix_workspace,
     glo::GLO,
     total_hyperparameters::Vector{T};
-    y_obs::Vector{T}=copy(glo.y_obs)
+    y_obs::Vector{T}=copy(glo.y_obs),
+    kwargs...
     ) where {T<:Real}
 
-    calculate_shared_∇nlogL_matrices!(workspace, glo, total_hyperparameters)
+    calculate_shared_∇nlogL_matrices!(workspace, glo, total_hyperparameters; kwargs...)
 
     return ∇∇nlogL_GLOM(glo, workspace.nlogL_hyperparameters, workspace.Σ_obs, y_obs, workspace.Σ_obs \ y_obs, workspace.βs)
 

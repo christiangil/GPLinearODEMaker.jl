@@ -18,7 +18,7 @@ numerical estimates for the dΣdθs are approximately the same.
 - Else returns a vector with some combination of the numerically estimated
 dΣdθs, analytical dΣdθs, and differences between them
 """
-function est_dΣdθ(glo::GLO, kernel_hyperparameters::Vector{T}; return_est::Bool=true, return_anal::Bool=false, return_dif::Bool=false, return_bool::Bool=false, dif::Real=1e-6, print_stuff::Bool=true) where {T<:Real}
+function est_dΣdθ(glo::GLO, kernel_hyperparameters::Vector{T}; return_est::Bool=true, return_anal::Bool=false, return_dif::Bool=false, return_bool::Bool=false, dif::Real=1e-6, print_stuff::Bool=true, kwargs...) where {T<:Real}
 
     total_hyperparameters = append!(collect(Iterators.flatten(glo.a)), kernel_hyperparameters)
 
@@ -50,7 +50,7 @@ function est_dΣdθ(glo::GLO, kernel_hyperparameters::Vector{T}; return_est::Boo
     if return_anal || return_dif || return_bool
         anal_dΣdθs = zeros(length(total_hyperparameters), glo.n_out * length(x), glo.n_out * length(x))
         for i in 1:length(total_hyperparameters)
-            anal_dΣdθs[i, :, :] =  covariance(glo, total_hyperparameters; dΣdθs_total=[i])
+            anal_dΣdθs[i, :, :] =  covariance(glo, total_hyperparameters; dΣdθs_total=[i], kwargs...)
         end
         if return_anal; append!(return_vec, [anal_dΣdθs]) end
     end
@@ -202,12 +202,13 @@ function est_∇∇(g::Function, inputs::Vector{<:Real}; dif::Real=1e-7, ignore_
     j = 1
     dim = length(remove_zeros(inputs))
     hess = zeros(dim, dim)
+    hold = copy(inputs)
     for i in 1:length(inputs)
         if !ignore_0_inputs || inputs[i]!=0
-            hold = copy(inputs)
             hold[i] += dif
             hess[j, :] =  (g(hold) - val) / dif
             j += 1
+            hold[i] = inputs[i]
         end
     end
     return symmetric_A(hess)
@@ -235,12 +236,13 @@ function est_∇∇_from_f(f::Function, inputs::Vector{<:Real}; dif::Real=1e-7, 
     #estimate hessian
     j = 1
     hess = zeros(length(inputs), length(inputs))
+    hold = copy(inputs)
     for i in 1:length(inputs)
         if !ignore_0_inputs || inputs[i]!=0
-            hold = copy(inputs)
             hold[i] += dif
             hess[j, :] =  (est_∇(f, hold; dif=dif, ignore_0_inputs=ignore_0_inputs) - val) / dif
             j += 1
+            hold[i] = inputs[i]
         end
     end
     return symmetric_A(hess)

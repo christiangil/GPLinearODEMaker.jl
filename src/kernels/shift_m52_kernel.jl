@@ -21,26 +21,22 @@ function shift_kernel(
 
     λ = hyperparameters[1]
     shift = hyperparameters[2]
-
     # dλ = dorder[3]
     # dshift = dorder[4]
 
-    if outputs==[1,1]
-        return m52_kernel([λ], δ, dorder[1:3])
-    end
+    variance = outputs[1]==outputs[2]
+
+    if dorder[4]>0 && variance; return 0 end
+
+    if variance; return m52_kernel([λ], δ, dorder[1:3]) end
 
     if outputs==[2,1]
-        return m52_kernel([λ, -shift], δ, dorder[1:4]; shift_ind=2)
+        return m52_kernel([λ, -shift], δ, dorder; shift_ind=2)
     end
 
     if outputs==[1,2]
-        return m52_kernel([λ, shift], δ, dorder[1:4]; shift_ind=2)
+        return m52_kernel([λ, shift], δ, dorder; shift_ind=2)
     end
-
-    if outputs==[2,2]
-        return m52_kernel([λ], δ, dorder[1:3])
-    end
-
 
 end
 
