@@ -14,34 +14,24 @@ Use with include("src/kernels/se_se_kernel.jl").
 - `shift_ind::Integer=0`: If changed, the index of which hyperparameter is the `δ` shifting one
 """
 function se_se_kernel(
-    hyperparameters::Vector{<:Real},
+    hyperparameters::AbstractVector{<:Real},
     δ::Real,
-    dorder::Vector{<:Integer};
-    shift_ind::Integer=0)
+    dorder::AbstractVector{<:Integer})
 
-    include_shift = shift_ind!=0
-    @assert length(hyperparameters)==3+Int(include_shift) "hyperparameters is the wrong length"
-    dorder_len = 5 + Int(include_shift)
+    @assert length(hyperparameters)==3 "hyperparameters is the wrong length"
+    dorder_len = 5
     @assert length(dorder)==dorder_len "dorder is the wrong length"
-    @assert maximum(dorder) < 3 "No more than two derivatives for each time or hyperparameter can be calculated"
+    @assert maximum(dorder) < 5 "No more than two derivatives for each time or hyperparameter can be calculated"
+    @assert minimum(dorder) >= 0 "No integrals"
 
     dorder2 = dorder[2]
     dorder[2] += dorder[1]
 
-    if include_shift
-        dorder[2] += dorder[shift_ind+2]
-        δ += hyperparameters[shift_ind]
-        hyperparameters_view = view(hyperparameters, 1:4 .!= shift_ind)
-        dorder_view = view(dorder, 2:dorder_len)
-        dorder_view = view(dorder_view, 1:(dorder_len-1) .!= (shift_ind+1))
-    else
-        hyperparameters_view = hyperparameters
-        dorder_view = view(dorder, 2:dorder_len)
-    end
-
-    λ1 = hyperparameters_view[1]
-    λ2 = hyperparameters_view[2]
-    sratio = hyperparameters_view[3]
+    dorder_view = view(dorder, 2:dorder_len)
+    
+    λ1 = hyperparameters[1]
+    λ2 = hyperparameters[2]
+    sratio = hyperparameters[3]
 
     if dorder_view==[6, 0, 0, 2]
         func = -30*exp((-1/2)*δ^2/λ2^2)/λ2^6 + 90*exp((-1/2)*δ^2/λ2^2)*δ^2/λ2^8 - 30*exp((-1/2)*δ^2/λ2^2)*δ^4/λ2^10 + 2*exp((-1/2)*δ^2/λ2^2)*δ^6/λ2^12

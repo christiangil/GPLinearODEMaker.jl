@@ -2,9 +2,9 @@ using Pkg
 Pkg.activate("examples")
 Pkg.instantiate()
 
-import GPLinearODEMaker; GLOM = GPLinearODEMaker
+import GPLinearODEMaker as GLOM
 
-kernel, n_kern_hyper = GLOM.include_kernel("shift")
+kernel, n_kern_hyper = GLOM.include_lag_kernel("m52")
 
 n = 100
 xs = 20 .* sort(rand(n))

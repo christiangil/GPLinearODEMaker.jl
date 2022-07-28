@@ -14,32 +14,22 @@ Use with include("src/kernels/cos_kernel.jl").
 - `shift_ind::Integer=0`: If changed, the index of which hyperparameter is the `δ` shifting one
 """
 function cos_kernel(
-    hyperparameters::Vector{<:Real},
+    hyperparameters::AbstractVector{<:Real},
     δ::Real,
-    dorder::Vector{<:Integer};
-    shift_ind::Integer=0)
+    dorder::AbstractVector{<:Integer})
 
-    include_shift = shift_ind!=0
-    @assert length(hyperparameters)==1+Int(include_shift) "hyperparameters is the wrong length"
-    dorder_len = 3 + Int(include_shift)
+    @assert length(hyperparameters)==1 "hyperparameters is the wrong length"
+    dorder_len = 3
     @assert length(dorder)==dorder_len "dorder is the wrong length"
-    @assert maximum(dorder) < 3 "No more than two derivatives for each time or hyperparameter can be calculated"
+    @assert maximum(dorder) < 5 "No more than two derivatives for each time or hyperparameter can be calculated"
+    @assert minimum(dorder) >= 0 "No integrals"
 
     dorder2 = dorder[2]
     dorder[2] += dorder[1]
 
-    if include_shift
-        dorder[2] += dorder[shift_ind+2]
-        δ += hyperparameters[shift_ind]
-        hyperparameters_view = view(hyperparameters, 1:2 .!= shift_ind)
-        dorder_view = view(dorder, 2:dorder_len)
-        dorder_view = view(dorder_view, 1:(dorder_len-1) .!= (shift_ind+1))
-    else
-        hyperparameters_view = hyperparameters
-        dorder_view = view(dorder, 2:dorder_len)
-    end
-
-    λ = hyperparameters_view[1]
+    dorder_view = view(dorder, 2:dorder_len)
+    
+    λ = hyperparameters[1]
 
     if dorder_view==[6, 2]
         func = -2688*cos(2*δ*π/λ)*π^6/λ^8 + 1792*δ*sin(2*δ*π/λ)*π^7/λ^9 + 256*δ^2*cos(2*δ*π/λ)*π^8/λ^10

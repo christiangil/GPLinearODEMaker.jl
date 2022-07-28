@@ -106,34 +106,25 @@ Use with include(\"src/kernels/$kernel_name.jl\").
 - `shift_ind::Integer=0`: If changed, the index of which hyperparameter is the `δ` shifting one
 \"\"\"
 function $kernel_name(
-    hyperparameters::Vector{<:Real},
+    hyperparameters::AbstractVector{<:Real},
     δ::Real,
-    dorder::Vector{<:Integer};
-    shift_ind::Integer=0)
+    dorder::AbstractVector{<:Integer})
 
-    include_shift = shift_ind!=0
-    @assert length(hyperparameters)==$hyper_amount+Int(include_shift) \"hyperparameters is the wrong length\"
-    dorder_len = $(hyper_amount + 2) + Int(include_shift)
+    @assert length(hyperparameters)==$hyper_amount \"hyperparameters is the wrong length\"
+    dorder_len = $(hyper_amount + 2)
     @assert length(dorder)==dorder_len \"dorder is the wrong length\"
-    @assert maximum(dorder) < 3 \"No more than two derivatives for each time or hyperparameter can be calculated\"
+    @assert maximum(dorder) < 5 \"No more than two derivatives for each time or hyperparameter can be calculated\"
+    @assert minimum(dorder) >= 0 \"No integrals\"
 
     dorder2 = dorder[2]
     dorder[2] += dorder[1]
 
-    if include_shift
-        dorder[2] += dorder[shift_ind+2]
-        δ += hyperparameters[shift_ind]
-        hyperparameters_view = view(hyperparameters, 1:$(hyper_amount+1) .!= shift_ind)
-        dorder_view = view(dorder, 2:dorder_len)
-        dorder_view = view(dorder_view, 1:(dorder_len-1) .!= (shift_ind+1))
-    else
-        hyperparameters_view = hyperparameters
-        dorder_view = view(dorder, 2:dorder_len)
-    end\n\n""")
+    dorder_view = view(dorder, 2:dorder_len)
+    \n""")
 
     # map the hyperparameters that will be passed to this function to the symbol names
     for i in 1:(hyper_amount)
-        write(io, "    " * symbs_str[i] * " = hyperparameters_view[$i]\n")
+        write(io, "    " * symbs_str[i] * " = hyperparameters[$i]\n")
     end
     # if add_white_noise
     #     write(io, "    σ_white *= Int(δ == 0)\n")  # accounting for white noise only being on the diagonal
@@ -242,4 +233,70 @@ function $kernel_name(
     @warn "The order of hyperparameters in the function may be different from the order given when you made them in @vars. Check the created function file (or the print statement below) to see what order you need to actually use."
     println("$kernel_name() created at $file_loc")
     println("hyperparameters == ", symbs_str)
+end
+
+
+"""
+    include_lag_kernel(kernel_name)
+
+Provides a kernel for modelling two variables with the same shared latent GP,
+    but with a lag term between them using one of GLOM's base kernels. The
+    returned kernel function should be called with the lag hyperparameter
+    appended to the end of the hyperparameters for the base kernel.
+
+# Arguments
+- `kernel_name::String`: The base kernel function to use. Passed to include_kernel(kernel_name)
+"""
+function include_lag_kernel(kernel_name::String)
+
+    base_kernel, base_n_hyper = include_kernel(kernel_name)
+
+    function lag_kernel(
+        hyperparameters::Vector{<:Real},
+        δ::Real,
+        dorder::Vector{<:Integer};
+        outputs::Vector{<:Integer}=[1,1])
+
+        @assert length(hyperparameters)==base_n_hyper+1 "hyperparameters is the wrong length"
+        @assert length(dorder)== base_n_hyper+3 "dorder is the wrong length"
+        @assert maximum(dorder) < 3 "No more than two derivatives for each time or hyperparameter can be calculated"
+        @assert minimum(dorder) >= 0 "No integrals"
+
+        @assert maximum(outputs) < 3
+        @assert minimum(outputs) > 0
+        @assert length(outputs) == 2
+
+        θ = view(hyperparameters, 1:length(hyperparameters)-1)
+        lag = hyperparameters[end]
+        # dlag = dorder[end]
+
+        variance = outputs[1]==outputs[2]
+
+        if dorder[end]>0 && variance; return 0 end
+
+        dorder_no_lag = view(dorder, 1:base_n_hyper+2)
+
+        if variance; return base_kernel(θ, δ, dorder_no_lag) end
+
+        if outputs==[2,1]
+            dorder2 = dorder_no_lag[2]
+            dorder_no_lag[2] += dorder[end]
+            result = base_kernel(θ, δ - lag, dorder_no_lag)
+            dorder_no_lag[2] = dorder2
+            return result
+        end
+
+        if outputs==[1,2]
+            dorder2 = dorder_no_lag[2]
+            dorder_no_lag[2] += dorder[end]
+            result = powers_of_negative_one(dorder[end]) * base_kernel(θ, δ + lag, dorder_no_lag)
+            dorder_no_lag[2] = dorder2
+            return result
+        end
+
+        @error "You should never reach this. Some edge case is not being covered in lag_kernel()"
+
+    end
+
+    return lag_kernel, base_n_hyper+1  # the function handle and the number of kernel hyperparameters
 end
