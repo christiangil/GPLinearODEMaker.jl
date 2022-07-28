@@ -1,7 +1,7 @@
 name = "GPLinearODEMaker"
 uuid = "27ef9b34-1325-4cec-ba33-00f2f4637873"
 authors = ["Chistian Gilbertson <chistianjgilbertson@gmail.com>"]
-version = "0.1.11"
+version = "0.1.12"
 
 [deps]
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
