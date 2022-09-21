@@ -1,3 +1,5 @@
+import Base.copy
+
 """
     covariance!(Σ, kernel_func, x1list, x2list, kernel_hyperparameters; dorder=zeros(Int64, 2 + length(kernel_hyperparameters)), symmetric=false)
 
@@ -965,6 +967,7 @@ struct nlogL_matrix_workspace{T<:Real}
         βs::Vector{Matrix{T}}
         ) where T<:Real = new{typeof(nlogL_hyperparameters[1])}(nlogL_hyperparameters, Σ_obs, ∇nlogL_hyperparameters, βs)
 end
+Base.copy(ws::nlogL_matrix_workspace) = nlogL_matrix_workspace(copy(ws.nlogL_hyperparameters), copy(ws.Σ_obs), copy(ws.∇nlogL_hyperparameters), copy(ws.βs))
 
 
 """

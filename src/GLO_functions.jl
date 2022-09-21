@@ -1,3 +1,5 @@
+import Base.copy
+
 """
 	GLO{T1<:Real, T2<:Integer} a.k.a. GPLinearODE
 
@@ -93,6 +95,7 @@ struct GLO{T1<:Real, T2<:Integer}
 		return new{typeof(x_obs[1]),typeof(n_kern_hyper)}(kernel, n_kern_hyper, n_dif, n_out, x_obs, y_obs, noise, normals, a, non_zero_hyper_inds, coeff_orders, coeff_coeffs, covariance, has_covariance, kernel_changes_with_output)
 	end
 end
+Base.copy(glo::GLO) = GLO(glo.kernel, glo.n_kern_hyper, glo.n_dif, glo.n_out, copy(glo.x_obs), copy(glo.y_obs), copy(glo.noise), copy(glo.normals), copy(glo.a), copy(glo.non_zero_hyper_inds), copy(glo.coeff_orders), copy(glo.coeff_coeffs), copy(glo.covariance), glo.has_covariance, glo.kernel_changes_with_output)
 
 """
 	normalize_GLO!(glo)
