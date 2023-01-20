@@ -252,10 +252,10 @@ function include_lag_kernel(kernel_name::String)
     base_kernel, base_n_hyper = include_kernel(kernel_name)
 
     function lag_kernel(
-        hyperparameters::Vector{<:Real},
+        hyperparameters::AbstractVector{<:Real},
         δ::Real,
-        dorder::Vector{<:Integer};
-        outputs::Vector{<:Integer}=[1,1])
+        dorder::AbstractVector{<:Integer};
+        outputs::AbstractVector{<:Integer}=[1,1])
 
         @assert length(hyperparameters)==base_n_hyper+1 "hyperparameters is the wrong length"
         @assert length(dorder)== base_n_hyper+3 "dorder is the wrong length"
