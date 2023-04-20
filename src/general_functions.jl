@@ -254,3 +254,13 @@ function log_laplace_approximation(
     return logh - λ * g + 0.5 * (n * log(2 * π / λ) - logdet(H))
 
 end
+
+
+riffle(list_of_things::Vector{<:Vector{<:Real}}) = collect(Iterators.flatten(zip(list_of_things...)))
+unriffle(riffled_list::Vector{<:Real}, n_out::Int) = [riffled_list[i:n_out:end] for i in 1:n_out]
+
+
+remainder(vec, x) = [i > 0 ? i % x : (i % x) + x for i in vec]
+
+
+rounded(x::Real) = round(x, digits=2)

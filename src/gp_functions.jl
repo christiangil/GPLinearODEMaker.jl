@@ -1272,3 +1272,11 @@ function reconstruct_total_hyperparameters(
     return total_hyperparameters
 
 end
+
+
+function prior_covariance(kernel::Function, kernel_hyper::Vector{<:Real}, a0::Matrix{<:Real}, obs_xs::Vector{<:Real}; noise_list::Vector{<:Vector{<:Real}}=[zeros(length(obs_xs)) for i in axes(a0,1)], kwargs...)
+    total_hyper = append!(collect(Iterators.flatten(a0)), kernel_hyper)
+    glo = GLO(kernel, length(kernel_hyper), size(a0, 2), size(a0, 1), obs_xs, zeros(length(obs_xs) * size(a0, 1)); noise=collect(Iterators.flatten(zip(noise_list...))), a=a0, kwargs...)
+    Σ = Σ_observations(glo, total_hyper)
+    return Σ
+end
