@@ -94,6 +94,8 @@ For more details and options, see the [documentation](https://christiangil.githu
 
 You can read about the first usage of this package in [our paper](https://arxiv.org/abs/2009.01085)
 
+Also check out our [companion repository](https://github.com/christiangil/GLOM_RV_Example) which has some examples of using GLOM to fit stellar variability and planets
+
 # Installation
 
 The most current, tagged version of [GPLinearODEMaker.jl](https://github.com/christiangil/GPLinearODEMaker.jl) can be easily installed using Julia's Pkg
